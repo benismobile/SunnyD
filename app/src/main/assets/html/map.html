@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=utf-8 />
+    <title>Map View</title>
+
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox.js/v1.6.1/mapbox.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox.js/v1.6.1/mapbox.css' rel='stylesheet' />
+
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+<h1>map view</h1>
+<div id='map'></div>
+<script>
+
+L.mapbox.accessToken = 'pk.eyJ1IjoiYmJ1dGNoYXIiLCJhIjoiUG8tTl94ZyJ9.Dnn7UPaGyAaeinDJJGAcLw';
+
+
+ var map = L.mapbox.map('map', 'bbutchar.jp992835')
+    .setView([55.955, -3.181], 16);
+
+var caltonRiftTiles = L.mapbox.tileLayer('bbutchar.jp6bc3k8', { zIndex: 2})
+     .addTo(map)
+     .setOpacity(1) ;
+
+var myIcon = L.icon({
+	iconSize: [32, 32],
+	iconUrl: '../img/map_blue.png'
+});
+
+
+var marker = L.marker([53.3956, -2.9783], {icon: myIcon}).addTo(map);
+
+
+function getLocation() {
+
+    latlonObj = JSON.parse(Android.getLocation());
+    var latlng = L.latLng(latlonObj.lat, latlonObj.lon);
+    map.panTo(latlng);
+    marker.setLatLng(latlng) ;
+
+};
+
+
+
+function onLocationUpdate(latlonStr)
+{
+
+
+    var latlonObj = JSON.parse(latlonStr)
+    var latlng = L.latLng(latlonObj.lat, latlonObj.lon);
+
+
+    marker.setLatLng(latlng) ;
+    map.panTo(latlng);
+};
+
+
+function requestLocationUpdates()
+{
+
+    Android.requestLocationUpdates(5000) ; // five second interval
+
+}
+
+
+function requestBackgroundLocationUpdates()
+{
+
+    Android.requestBackgroundLocationUpdates(5000) ; // five second interval
+
+}
+
+</script>
+</body>
+</html>
