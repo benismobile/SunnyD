@@ -33,22 +33,31 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
 
     private GoogleApiClient apiClient ;
     private Location currentLocation ;
-    private Location updateLocation ;
+ //   private Location updateLocation ;
     private WebViewMap webViewMap ;
     private LocationFixListener fixListener = null ;
     private ForegroundLocationUpdateListener updateListener = null ;
     private BroadcastReceiver updateReceiver ;
     private PendingIntent locationIntent ;
     private Intent locationUpdateIntent = null ;
+    private int currentUpdateStatus = UPDATES_NOT_INITIALISED ;
 
-    public LocationAPI()
-    {
+    private boolean backgroundUpdatesRequested = true ;
+    private int backgroundUpdateInterval = 2000 ;
 
-    }
+
+
+    public static final int UPDATES_NOT_INITIALISED = 0 ;
+    public static final int UPDATES_BROADCASTING = 1 ;
+    public static final int UPDATES_RECEIVER_REGISTERED = 2 ;
+    public static final int UPDATES_MARKED_REMOVE = 3 ;
+
+    public static final String KEY_CURRENT_UPDATE_STATUS = "LOCATION_API_UPDATE_STATUS";
 
     public LocationAPI(WebViewMap webViewMap) {
 
         this.webViewMap = webViewMap ;
+
         this.apiClient = new GoogleApiClient.Builder(this.webViewMap)
                 .addApi(LocationServices.API)
                 .addConnectionCallbacks(this)
@@ -57,34 +66,84 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
 
         apiClient.connect();
 
-        this.fixListener = new LocationFixListener() ;
-        this.updateListener = new ForegroundLocationUpdateListener() ;
-
     }
 
 
-    public Intent getLocationUpdateIntent()
+    public GoogleApiClient getApiClient()
+    {
+        return this.apiClient ;
+
+    }
+
+    public int getCurrentUpdateStatus()
+    {
+        return this.currentUpdateStatus ;
+    }
+
+    public PendingIntent getLocationUpdateIntent()
     {
 
-        return this.locationUpdateIntent ;
+        return this.locationIntent ;
+    }
+
+
+    public BroadcastReceiver getUpdateReceiver()
+    {
+
+        return this.updateReceiver ;
     }
 
     @Override
     public void onConnected(Bundle bundle) {
 
+        this.fixListener = new LocationFixListener() ;
+        this.updateListener = new ForegroundLocationUpdateListener() ;
+
+
         // we've connected to GoogleApiClient so can now use FusedLocationAPI
         // initial location fix request
-        Log.d("WebViewMap", "onConnected") ;
-        LocationRequest request = LocationRequest.create();
-        request.setNumUpdates(1);
-        request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        LocationServices.FusedLocationApi.requestLocationUpdates(apiClient, request, fixListener);
+        Log.d("LocationAPI", "onConnected") ;
+        LocationRequest locationFixRequest = LocationRequest.create();
+        locationFixRequest.setNumUpdates(3); // get initial location fix - run a few times to get more accurate result
+        locationFixRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        LocationServices.FusedLocationApi.requestLocationUpdates(apiClient, locationFixRequest, fixListener); // fixlistener sets current location member variable
 
-        // register receiver for background location updates
-        this.updateReceiver = new BackgroundLocationUpdateReceiver();
-        IntentFilter filter = new IntentFilter() ;
-        filter.addAction("org.fabeo.benbutchart.webmap.LOCATION_UPDATE");
-        this.webViewMap.registerReceiver(this.updateReceiver, filter);
+
+
+        // TODO if the user has requested background location updates we will now request them
+
+        LocationRequest backgroundUpdateRequest = LocationRequest.create();
+        backgroundUpdateRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        backgroundUpdateRequest.setInterval(this.backgroundUpdateInterval) ;
+
+        this.locationUpdateIntent = new Intent() ;
+        this.locationUpdateIntent.setAction("org.fabeo.benbutchart.webmap.LOCATION_UPDATE") ;
+        // this.locationUpdateIntent.setClass(this.webViewMap, LocationAPI.BackgroundLocationUpdateReceiver.class) ;
+
+        Log.d("LocationAPI", "requestBackgroundLocationUpdates currentUpdateStatus" + currentUpdateStatus) ;
+
+
+        this.locationIntent = PendingIntent.getBroadcast(this.webViewMap, 0,
+                locationUpdateIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+
+        PendingResult<Status> result =
+                LocationServices.FusedLocationApi.requestLocationUpdates(apiClient, backgroundUpdateRequest, this.locationIntent);
+
+        result.setResultCallback(new ResultCallback<Status>() {
+            @Override
+            public void onResult(Status status) {
+                Log.d("LocationAPI", " status success: " + status.isSuccess() + " status code:" + status.getStatusCode());
+
+                if (status.isSuccess()) {
+
+                    currentUpdateStatus = UPDATES_BROADCASTING;
+                }
+
+            }
+        });
+
+
 
 
     }
@@ -92,73 +151,95 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
     @Override
     public void onConnectionSuspended(int i) {
 
-        Log.d("WebViewMap" ,"ApiClient connection suspended" ) ;
+        Log.d("LocationAPI" ,"ApiClient connection suspended" ) ;
         Toast.makeText(webViewMap, "ApiClient connection suspended", Toast.LENGTH_SHORT).show();
 
     }
 
 
-    public void removeLocationUpdates()
+
+    public void removeBackgroundLocationUpdates()
     {
-       // if(apiClient != null  ) {
-
-            Log.d("WebViewMap", "removeLocationUpdates and unregister receiver") ;
-            LocationServices.FusedLocationApi.removeLocationUpdates(apiClient, this.updateListener); // foreground updates
-            LocationServices.FusedLocationApi.removeLocationUpdates(apiClient, this.locationIntent); // background updates
-            this.webViewMap.unregisterReceiver(this.updateReceiver);
-            this.updateReceiver = null ;
+        //Log.d("LocationAPI", " remove current locationUpdates and unregister receiver: apiClient: " + apiClient + " updateListener: " + this.updateListener + " updateReceiver: " + this.updateReceiver + " pendingIntent:" + this.locationIntent ) ;
+        //Log.d("LocationAPI", "remove background location updates");
 
 
-       // }
 
+        if(locationIntent==null)
+        {
+
+            this.locationUpdateIntent = new Intent() ;
+            this.locationUpdateIntent.setAction("org.fabeo.benbutchart.webmap.LOCATION_UPDATE") ;
+
+            this.locationIntent = PendingIntent.getBroadcast(this.webViewMap, 0,
+                    locationUpdateIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+        }
+
+        PendingResult<Status> backgroundResult = LocationServices.FusedLocationApi.removeLocationUpdates(this.apiClient, this.locationIntent);
+        this.locationIntent.cancel();
+
+        backgroundResult.setResultCallback(new ResultCallback<Status>() {
+            @Override
+            public void onResult(Status status) {
+                Log.d("LocationAPI", " background update removed status success: " + status.isSuccess() + " status code:" + status.getStatusCode());
+
+            }
+        }) ;
     }
-
 
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
         //TODO handle connection failed
+
+        Log.d("Location API" , "onConnectionFailed") ;
     }
 
+    public void registerUpdateReceiver()
+    {
+
+        this.updateReceiver = new BackgroundLocationUpdateReceiver();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction("org.fabeo.benbutchart.webmap.LOCATION_UPDATE");
+        this.webViewMap.registerReceiver(this.updateReceiver, filter);
+        this.currentUpdateStatus = UPDATES_RECEIVER_REGISTERED;
+
+    }
+
+    public static void unRegisterUpdateReceiver(Context context)
+    {
+        BackgroundLocationUpdateReceiver receiver = new BackgroundLocationUpdateReceiver() ;
+        context.unregisterReceiver();
+
+    }
+
+
+    public void unregisterUpdateReceiver()
+    {
+
+        if(this.updateReceiver == null) {
+            this.updateReceiver = new BackgroundLocationUpdateReceiver();
+
+        }
+
+        this.webViewMap.unregisterReceiver(this.updateReceiver);
+    }
 
     @JavascriptInterface
     public void requestBackgroundLocationUpdates(int interval) {
 
-
-        if(apiClient.isConnected())
-        {
-            LocationRequest request = LocationRequest.create();
-            request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-            request.setInterval(interval) ;
-
-            this.locationUpdateIntent = new Intent() ;
-            this.locationUpdateIntent.setAction("org.fabeo.benbutchart.webmap.LOCATION_UPDATE") ;
-           // this.locationUpdateIntent.setClass(this.webViewMap, LocationAPI.BackgroundLocationUpdateReceiver.class) ;
-
-            this.locationIntent = PendingIntent.getBroadcast(this.webViewMap, 0,
-                            locationUpdateIntent, PendingIntent.FLAG_CANCEL_CURRENT);
-
-
-            PendingResult<Status> result = LocationServices.FusedLocationApi.requestLocationUpdates(apiClient, request, this.locationIntent);
-
-           result.setResultCallback(new ResultCallback<Status>() {
-               @Override
-               public void onResult(Status status) {
-                   Log.d("WebViewMap", " status success: " + status.isSuccess() + " status code:" + status.getStatusCode());
-
-               }
-           });
-
-
-        }
+        Log.d("LocationAPI", "user requested background location updates") ;
 
     }
+
+
+
+
+
+
 
         @JavascriptInterface
     public void requestLocationUpdates(int interval)
     {
-
-
-
           if(apiClient.isConnected())
           {
               LocationRequest request = LocationRequest.create();
@@ -171,15 +252,8 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
           else
           {
               Toast.makeText(webViewMap, "Request Location Updates apiClient not connected", Toast.LENGTH_SHORT).show();
-
-              // TODO apiClient.connect();
-              // TODO updatesRequestPending = true ;
               //TODO handle apiClinet not connected
-              // should we call javascript callback with null JSON string  or just not call?
           }
-
-
-
     }
 
 
@@ -193,7 +267,7 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
         }
 
         LocationRequest request = LocationRequest.create();
-        request.setNumUpdates(1); // should already have location fix so one update enough
+        request.setNumUpdates(1); // should already have initial location fix so one update enough
         request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         LocationServices.FusedLocationApi.requestLocationUpdates(apiClient, request, this.fixListener);
 
@@ -208,16 +282,17 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
            String latlon = getLatLngJSON(webViewMap, this.currentLocation);
            return latlon;
         }
-
-
         return "{}";
+    }
 
+    public void setCurrentUpdateStatus(int status) {
+
+        this.currentUpdateStatus = status ;
     }
 
 
     public class LocationFixListener implements LocationListener
     {
-
         @Override
         public void onLocationChanged(Location location) {
             currentLocation = location;
@@ -231,7 +306,8 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
         @Override
         public void onLocationChanged(Location location) {
 
-            updateLocation = location;
+            final Location updateLocation = location; // TODO does updateLocation need to be a member variable?
+            currentLocation = location ;
 
             if(webViewMap != null && webViewMap.getWebView() != null ) {
                 webViewMap.getWebView().post(new Runnable() {
@@ -256,9 +332,11 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
         public void onReceive(Context context, Intent intent) {
 
 
-            Log.d("WebViewMap", "Background Location Update Recevier onRecieve called");
+            Log.d("LocationAPI", "Background Location Update Recevier onRecieve called");
             // Toast.makeText(webViewMap, "LocationUpdateReceiver:onRecieve(): " , Toast.LENGTH_SHORT).show();
             final Location updateLocation = (Location) intent.getExtras().get(LocationServices.FusedLocationApi.KEY_LOCATION_CHANGED);
+
+            currentLocation = updateLocation ;
 
             if (webViewMap != null && webViewMap.getWebView() != null) {
                 webViewMap.getWebView().post(new Runnable() {
