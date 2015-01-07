@@ -79,8 +79,8 @@ public class WebViewMap extends Activity {
         super.onStop();
         Log.d("WebViewMap", "onStop") ;
 
-//        this.locationAPI.removeBackgroundLocationUpdates();
-//        Log.d("WebViewMap", "onStop: removed Background Location Updates") ;
+        this.locationAPI.removeBackgroundLocationUpdates();
+        Log.d("WebViewMap", "onStop: removed Background Location Updates") ;
 
 
         this.locationAPI.getApiClient().disconnect();

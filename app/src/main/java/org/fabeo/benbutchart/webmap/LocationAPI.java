@@ -117,14 +117,18 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
         backgroundUpdateRequest.setInterval(this.backgroundUpdateInterval) ;
 
         this.locationUpdateIntent = new Intent() ;
-        this.locationUpdateIntent.setAction("org.fabeo.benbutchart.webmap.LOCATION_UPDATE") ;
-        // this.locationUpdateIntent.setClass(this.webViewMap, LocationAPI.BackgroundLocationUpdateReceiver.class) ;
+        this.locationUpdateIntent.setAction(LocationUpdateIntentService.ACTION_LOCATION_UPDATE) ;
+        this.locationUpdateIntent.setClass(this.webViewMap, org.fabeo.benbutchart.webmap.LocationUpdateIntentService.class) ;
 
         Log.d("LocationAPI", "requestBackgroundLocationUpdates currentUpdateStatus" + currentUpdateStatus) ;
 
 
-        this.locationIntent = PendingIntent.getBroadcast(this.webViewMap, 0,
-                locationUpdateIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+        this.locationIntent = PendingIntent.getService(this.webViewMap, 0,
+                         locationUpdateIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+
+                //  this.locationIntent = PendingIntent.getBroadcast(this.webViewMap, 0,
+       //         locationUpdateIntent, PendingIntent.FLAG_CANCEL_CURRENT);
 
 
         PendingResult<Status> result =
@@ -169,9 +173,9 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
         {
 
             this.locationUpdateIntent = new Intent() ;
-            this.locationUpdateIntent.setAction("org.fabeo.benbutchart.webmap.LOCATION_UPDATE") ;
+            this.locationUpdateIntent.setAction(LocationUpdateIntentService.ACTION_LOCATION_UPDATE) ;
 
-            this.locationIntent = PendingIntent.getBroadcast(this.webViewMap, 0,
+            this.locationIntent = PendingIntent.getService(this.webViewMap, 0,
                     locationUpdateIntent, PendingIntent.FLAG_CANCEL_CURRENT);
         }
 
@@ -207,8 +211,8 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
 
     public static void unRegisterUpdateReceiver(Context context)
     {
-        BackgroundLocationUpdateReceiver receiver = new BackgroundLocationUpdateReceiver() ;
-        context.unregisterReceiver();
+        // BackgroundLocationUpdateReceiver receiver = new BackgroundLocationUpdateReceiver() ;
+        // context.unregisterReceiver();
 
     }
 

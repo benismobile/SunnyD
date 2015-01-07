@@ -39,7 +39,7 @@ var marker = L.marker([53.3956, -2.9783], {icon: myIcon}).addTo(map);
 
 function getLocation() {
 
-    latlonObj = JSON.parse(Android.getLocation());
+    latlonObj = JSON.parse(Android.getCurrentLocation());
     var latlng = L.latLng(latlonObj.lat, latlonObj.lon);
     map.panTo(latlng);
     marker.setLatLng(latlng) ;
@@ -60,6 +60,11 @@ function onLocationUpdate(latlonStr)
     map.panTo(latlng);
 };
 
+
+function onTrackUpdate(String gpx)
+{
+
+}
 
 function requestLocationUpdates()
 {
