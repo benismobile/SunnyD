@@ -283,7 +283,7 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
         }
         else
         {
-           String latlon = getLatLngJSON(webViewMap, this.currentLocation);
+           String latlon = null ; // getLatLngJSON(webViewMap, this.currentLocation);
            return latlon;
         }
         return "{}";
@@ -317,7 +317,7 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
                 webViewMap.getWebView().post(new Runnable() {
                     @Override
                     public void run() {
-                        String latlon = getLatLngJSON(webViewMap, updateLocation);
+                        String latlon = null ; // getLatLngJSON(webViewMap, updateLocation);
                         webViewMap.getWebView().loadUrl("javascript:onLocationUpdate('" + latlon + "');");
 
                     }
@@ -335,7 +335,7 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
         @Override
         public void onReceive(Context context, Intent intent) {
 
-
+/*
             Log.d("LocationAPI", "Background Location Update Recevier onRecieve called");
             // Toast.makeText(webViewMap, "LocationUpdateReceiver:onRecieve(): " , Toast.LENGTH_SHORT).show();
             final Location updateLocation = (Location) intent.getExtras().get(LocationServices.FusedLocationApi.KEY_LOCATION_CHANGED);
@@ -350,10 +350,12 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
                         webViewMap.getWebView().loadUrl("javascript:onLocationUpdate('" + latlon + "');");
 
                     }
+
                 });
 
 
             }
+*/
         }
     }
 }

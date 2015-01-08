@@ -37,49 +37,70 @@ var myIcon = L.icon({
 var marker = L.marker([53.3956, -2.9783], {icon: myIcon}).addTo(map);
 
 
-function getLocation() {
+function getCurrentLocation() {
 
-    latlonObj = JSON.parse(Android.getCurrentLocation());
+    // first get immediate response by obtaining last known location
+    latlonObj = JSON.parse(AndroidLocationAPI.getCurrentLocation());
     var latlng = L.latLng(latlonObj.lat, latlonObj.lon);
     map.panTo(latlng);
     marker.setLatLng(latlng) ;
-
+   // now request location fix - result will be sent to the onLocationFix() callback
+      AndroidLocationAPI.requestLocationFix() ;
 };
 
 
+function onLocationFix(latlonStr){
 
-function onLocationUpdate(latlonStr)
-{
-
-
-    var latlonObj = JSON.parse(latlonStr)
+    var latlonObj = JSON.parse(latlonStr);
     var latlng = L.latLng(latlonObj.lat, latlonObj.lon);
-
-
     marker.setLatLng(latlng) ;
     map.panTo(latlng);
 };
 
 
-function onTrackUpdate(String gpx)
-{
+function onLocationUpdate(latlonStr){
 
-}
+    var latlonObj = JSON.parse(latlonStr) ;
+    var latlng = L.latLng(latlonObj.lat, latlonObj.lon);
+
+    marker.setLatLng(latlng) ;
+    map.panTo(latlng);
+};
+
 
 function requestLocationUpdates()
 {
+   // request updates at three second interval
 
-    Android.requestLocationUpdates(5000) ; // five second interval
+    AndroidLocationAPI.requestLocationUpdates(3000) ;
 
-}
+};
 
-
-function requestBackgroundLocationUpdates()
+function stopLocationUpdates()
 {
-
-    Android.requestBackgroundLocationUpdates(5000) ; // five second interval
-
+    AndroidLocationAPI.stopLocationUpdates() ;
 }
+
+
+function requestBackgroundUpdates()
+{
+    console.log("requestBackgroundUpdates") ;
+
+};
+
+
+function onTrackUpdate(gpx){
+
+    console.log("onTrackUpdate") ;
+
+};
+
+function isUpdatesRequested(){
+
+    return AndroidLocationAPI.isUpdatesRequested() ;
+
+};
+
 
 </script>
 </body>

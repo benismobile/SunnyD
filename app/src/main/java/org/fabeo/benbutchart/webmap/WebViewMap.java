@@ -26,197 +26,195 @@ import com.google.android.gms.location.LocationServices;
 public class WebViewMap extends Activity {
 
     WebView webView = null ;
-    LocationAPI locationAPI = null ;
+    WebViewLocationAPI locationAPI = null ;
     static SharedPreferences location_api_state_prefs ;
     static SharedPreferences.Editor location_api_state_editor ;
+    private static final String LOG_TAG = "WebViewMap Activity" ;
 
+    private static final String UPDATES_REQUESTED_STATUS_KEY = "UPDATES_REQUESTED" ;
+    private static final String UPDATE_INTERVAL_KEY = "UPDATE_INTERVAL" ;
+
+    private boolean isUpdatesRequested = false ;
+    private int updateInterval = 0 ;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
 
-        Log.d("WebViewMap", "onCreate") ;
+        Log.d(LOG_TAG, "onCreate()") ;
+
+        if(savedInstanceState != null)
+        {
+
+            Log.d(LOG_TAG, "onCreate saved instance state: Updates:"
+                    + savedInstanceState.getBoolean(UPDATES_REQUESTED_STATUS_KEY)
+                    + " Interval:" + savedInstanceState.getInt(UPDATE_INTERVAL_KEY)
+            ) ;
+            this.updateInterval = savedInstanceState.getInt(UPDATE_INTERVAL_KEY) ;
+            this.isUpdatesRequested =    savedInstanceState.getBoolean(UPDATES_REQUESTED_STATUS_KEY) ;
+        }
+
 
         // Open Shared Preferences
         location_api_state_prefs = getSharedPreferences("LOCATION_API_STATE", Context.MODE_PRIVATE);
-
         // Get an editor
         location_api_state_editor = location_api_state_prefs.edit();
-        // reset location api status?
-//        location_api_state_editor.putInt(LocationAPI.KEY_CURRENT_UPDATE_STATUS, LocationAPI.UPDATES_NOT_INITIALISED);
-  //      location_api_state_editor.commit();
+
 
         this.webView = new WebView(this) ;
+
+        this.locationAPI = new WebViewLocationAPI(this.webView);
+
         setContentView(this.webView);
 
-        WebSettings webSettings = webView.getSettings() ;
+
+        WebSettings webSettings = this.webView.getSettings() ;
         webSettings.setJavaScriptEnabled(true);
         webSettings.setAllowContentAccess(true);
         webSettings.setBlockNetworkImage(false);
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadsImagesAutomatically(true);
 
-        webView.addJavascriptInterface(locationAPI, "Android");
-        webView.post(new Runnable() {
+        this.webView.addJavascriptInterface(this.locationAPI, "AndroidLocationAPI");
+
+        this.webView.post(new Runnable() {
             @Override
             public void run() {
                 webView.loadUrl("file:///android_asset/html/map.html");
             }
         });
 
-
     }
 
-    protected void onPause(){
-        super.onPause();
-        Log.d("WebViewMap", "onPause") ;
-
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        Log.d("WebViewMap", "onStop") ;
-
-        this.locationAPI.removeBackgroundLocationUpdates();
-        Log.d("WebViewMap", "onStop: removed Background Location Updates") ;
-
-
-        this.locationAPI.getApiClient().disconnect();
-        Log.d("WebViewMap", "onStop: discconected api client") ;
-
-  //      this.locationAPI.unregisterUpdateReceiver();
-  //      Log.d("WebViewMap", "onStop: unregistered receiver") ;
-
-   /*
-        if(this.locationAPI == null || this.locationAPI.getUpdateReceiver() == null) // update receiver is gone so remove location updates
-        {
-            Log.d("WebViewMap", "onStop: updateBroadcastReceiver is null so remove location updates"  ) ;
-            this.locationAPI.removeBackgroundLocationUpdates();
-        }
-   */
-
-    }
 
     @Override
     protected void onStart() {
         super.onStart();
-        // create new LocationAPI instance - will request connection to GoogleAPI client
-        this.locationAPI = new LocationAPI(this) ;
-        // register update receiver
-        this.locationAPI.registerUpdateReceiver();
+        Log.d(LOG_TAG, "onStart()") ;
+
+
+        if(this.webView == null) {
+            Log.d(LOG_TAG, "onStart: webView instance is null") ;
+
+        }
+        // create new LocationAPI instance - will create LocationClient which in turn will request connection to GoogleAPI client
+        if(this.locationAPI == null) {
+            Log.d(LOG_TAG, "onStart: locationAPI instance null") ;
+            this.locationAPI = new WebViewLocationAPI(this.webView);
+        }
+
+
 
     }
 
     @Override
     protected void onRestart() {
         super.onRestart();
-        Log.d("WebViewMap", "onRestart()") ;
-
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        Log.d("WebViewMap", "onSavedInstanceState") ;
-
-    }
-
-    @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        Log.d("WebViewMap", "onRestoreInstanceState") ;
+        Log.d(LOG_TAG, "onRestart()") ;
 
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d("WebViewMap", "onResume") ;
+        Log.d(LOG_TAG, "onResume()") ;
 
-        if(this.locationAPI == null)
+        if(this.webView == null) {
+            Log.d(LOG_TAG, "onResume(): webView instance is null") ;
+
+        }
+
+        if(this.locationAPI == null )
         {
-            Log.d("WebViewMap", "onResume locationAPI is null" ) ;
-        }
-        else {
-
-            Log.d("WebViewMap", "onResume locationAPI is STILL valid" ) ;
-
-            if (!this.locationAPI.getApiClient().isConnected()) {
-                Log.d("WebViewMap", "onResume locationAPI is NOT connected");
-            } else {
-                Log.d("WebViewMap", "onResume locationAPI is STILL connected");
-            }
-
-
-            if(this.locationAPI.getUpdateReceiver() == null)
-            {
-                Log.d("WebViewMap", "onResume locationAPI update receiver instance is null");
-            }
-            else
-            {
-                Log.d("WebViewMap", "onResume locationAPI update receiver instance is STILL valid:" + this.locationAPI.getUpdateReceiver() );
-            }
+            Log.e(LOG_TAG, "onResume(): locationAPI instance is null") ;
+            this.locationAPI = new WebViewLocationAPI(this.webView) ;
         }
 
-       /*
-        if(this.locationAPI == null) {
+        Log.d(LOG_TAG, "onResume(): isUpdatesRequested" + this.isUpdatesRequested ) ;
 
-            Log.d("WebViewMap", "onResume locationAPI is null - will create a new one" ) ;
-            this.locationAPI = new LocationAPI(this) ;
-
-        }
-        else
+        if(this.isUpdatesRequested)
         {
-            if( ! this.locationAPI.getApiClient().isConnected())
-            {
-                Log.d("WebViewMap", "onResume locationAPI is not connected...re-connecting" ) ;
-
-                this.locationAPI.getApiClient().connect();
-
-            }
-            else
-            {
-                Log.d("WebViewMap", "onResume locationAPI is still connected" ) ;
-            }
+            Log.d(LOG_TAG, "onResume(): resume upddates with interval" + this.updateInterval ) ;
+            this.locationAPI.requestLocationUpdates(this.updateInterval);
         }
 
-
-
-        if(this.locationAPI != null && this.locationAPI.getUpdateReceiver() == null) // update receiver is gone so remove location updates
+/*
+        Log.d(LOG_TAG, "onResume(): wereUpdatesRequested:" + wereUpdatesRequested ) ;
+        if(wereUpdatesRequested)
         {
-            Log.d("WebViewMap", "onStop: updateBroadcastReceiver is null so remove location updates"  ) ;
-            this.locationAPI.removeBackgroundLocationUpdates();
+            // restart location requests
+//            int updateInterval = location_api_state_prefs.getInt(UPDATE_INTERVAL_KEY, 0) ;
+            Log.d(LOG_TAG, "onResume():updateinterval was: " + updateInterval ) ;
+            this.locationAPI.requestLocationUpdates(updateInterval);
         }
+*/
+    }
 
 
-
-        Log.d("WebViewMap", "onResume currentUpdateStatus: " + this.locationAPI.getCurrentUpdateStatus() ) ;
-        this.locationAPI.setCurrentUpdateStatus(currentUpdateStatus) ;
-        Log.d("WebViewMap", "onResume reset currentUpdateStatus: " + currentUpdateStatus ) ;
-         */
+    protected void onPause(){
+        super.onPause();
+        Log.d(LOG_TAG, "onPause") ;
 
     }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        Log.d(LOG_TAG, "onStop") ;
+
+        Log.d(LOG_TAG, "onStop(): is isUpdatesRequested:" + locationAPI.isUpdatesRequested() + " updateInterval: " + locationAPI.getUpdateInterval()) ;
+
+    //    location_api_state_editor.putBoolean(UPDATES_REQUESTED_STATUS_KEY, locationAPI.isUpdatesRequested());
+    //    location_api_state_editor.commit();
+    //    location_api_state_editor.putInt(UPDATE_INTERVAL_KEY, locationAPI.getUpdateInterval()) ;
+
+        this.isUpdatesRequested = this.locationAPI.isUpdatesRequested() ;
+        this.updateInterval = this.locationAPI.getUpdateInterval() ;
+
+        // activity no longer visible so stop foreground updates
+        if(this.isUpdatesRequested) {
+            this.locationAPI.stopLocationUpdates();
+        }
+    }
+
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        Log.d(LOG_TAG, "onSavedInstanceState()") ;
+        outState.putInt(UPDATE_INTERVAL_KEY, locationAPI.getUpdateInterval());
+        outState.putBoolean(UPDATES_REQUESTED_STATUS_KEY, locationAPI.isUpdatesRequested());
+
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+
+        Log.d(LOG_TAG, "onRestoreInstanceState()") ;
+
+
+        Log.d(LOG_TAG, "onRestoreInstanceStateinstance state: Updates:"
+                        + savedInstanceState.getBoolean(UPDATES_REQUESTED_STATUS_KEY)
+                        + " Interval:" + savedInstanceState.getInt(UPDATE_INTERVAL_KEY)
+        ) ;
+        this.updateInterval = savedInstanceState.getInt(UPDATE_INTERVAL_KEY) ;
+        this.isUpdatesRequested =    savedInstanceState.getBoolean(UPDATES_REQUESTED_STATUS_KEY) ;
+
+    }
+
 
     @Override
     protected void onDestroy() {
 
         super.onDestroy();
-        Log.d("WebViewMap", "onDestroy") ;
-         locationAPI.unregisterUpdateReceiver();
-
-/*
-        if(this.locationAPI == null || this.locationAPI.getUpdateReceiver() == null) // update receiver is gone so remove location updates
-        {
-            Log.d("WebViewMap", "onStop: updateBroadcastReceiver is null so remove location updates"  ) ;
-            this.locationAPI.removeBackgroundLocationUpdates();
-        }
-*/
+        Log.d(LOG_TAG, "onDestroy()") ;
+//        location_api_state_editor.clear() ;
+  //      location_api_state_editor.commit() ;
 
     }
-
-
 
 
     @Override
@@ -244,7 +242,7 @@ public class WebViewMap extends Activity {
                 @Override
                 public void run()
                 {
-                    webView.loadUrl("javascript:getLocation();");
+                    webView.loadUrl("javascript:getCurrentLocation();");
                 }
 
             });
@@ -269,7 +267,7 @@ public class WebViewMap extends Activity {
                 @Override
                 public void run()
                 {
-                    webView.loadUrl("javascript:requestBackgroundLocationUpdates();");
+                    webView.loadUrl("javascript:requestBackgroundUpdates();");
                 }
 
             });

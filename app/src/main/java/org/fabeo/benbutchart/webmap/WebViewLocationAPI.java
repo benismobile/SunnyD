@@ -1,6 +1,7 @@
 package org.fabeo.benbutchart.webmap;
 
 import android.location.Location;
+import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.widget.Toast;
@@ -18,11 +19,18 @@ public class WebViewLocationAPI
 
     private WebView webView ;
     private Location currentLocation ;
+    private LocationClient locationClient ;
+    private static final String LOG_TAG = "WebViewLocationAPI" ;
+    private boolean updatesRequested = false ;
+    private int updateInterval = 0 ;
+
 
     public WebViewLocationAPI(WebView webView)
     {
         this.webView = webView ;
+        this.locationClient = new LocationClient(webView.getContext() , this) ;
     }
+
 
    @JavascriptInterface
     public void onLocationUpdate(Location location)
@@ -43,9 +51,30 @@ public class WebViewLocationAPI
         }
     }
 
+    @JavascriptInterface
+    public void onLocationFix(Location location)
+    {
+        final Location locationFix = location ;
+        this.currentLocation = location ; // TODO Should this be updated here or not?
+
+        if(this.webView != null ) {
+            this.webView.post(new Runnable() {
+                @Override
+                public void run() {
+
+                    String latlon = getLatLngJSON(locationFix);
+                    Log.d(LOG_TAG, "callback to onLocationFix() with latlon" + latlon) ;
+                    webView.loadUrl("javascript:onLocationFix('" + latlon + "');");
+
+                }
+            });
+
+        }
+    }
+
 
     @JavascriptInterface
-    public void onTrackUpdate(final String GPXTrackData)
+    public void onTrackUpdate(String GPXTrackData)
     {
         final String gpxTrackData = GPXTrackData ;
 
@@ -79,7 +108,43 @@ public class WebViewLocationAPI
     }
 
 
+     @JavascriptInterface
+    public void requestLocationFix()
+    {
+       this.locationClient.requestLocationFix();
+
+    }
 
 
+    @JavascriptInterface
+
+    public void requestLocationUpdates(int interval)
+    {
+
+        this.locationClient.requestLocationUpdates(interval);
+        this.updatesRequested = true ;
+        this.updateInterval = interval ;
+    }
+
+    @JavascriptInterface
+    public void stopLocationUpdates()
+    {
+        locationClient.removeLocationUpdates();
+        this.updatesRequested = false ;
+
+    }
+
+    @JavascriptInterface
+    public boolean isUpdatesRequested()
+    {
+        return this.updatesRequested ;
+    }
+
+
+    @JavascriptInterface
+    public int getUpdateInterval()
+    {
+        return this.updateInterval ;
+    }
 
 }
