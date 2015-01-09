@@ -4,6 +4,7 @@ import android.location.Location;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import com.google.android.gms.location.LocationRequest;
@@ -18,12 +19,13 @@ public class WebViewLocationAPI
 {
 
     private WebView webView ;
-    private Location currentLocation ;
+    private Location currentLocation = null ;
     private LocationClient locationClient ;
     private static final String LOG_TAG = "WebViewLocationAPI" ;
     private boolean updatesRequested = false ;
+    private boolean locationFixObtained = false ;
     private int updateInterval = 0 ;
-
+    private boolean isCallbackScriptLoaded = false ;
 
     public WebViewLocationAPI(WebView webView)
     {
@@ -32,11 +34,19 @@ public class WebViewLocationAPI
     }
 
 
+
+   @JavascriptInterface
+   public boolean isLocationFixObtained()
+   {
+       return this.locationFixObtained ;
+   }
+
    @JavascriptInterface
     public void onLocationUpdate(Location location)
     {
         final Location updateLocation = location ;
-        this.currentLocation = location ; // TODO Should this be updated here or not?
+        this.currentLocation = location ;
+        this.locationFixObtained = true ;
 
         if(webView != null ) {
             webView.post(new Runnable() {
@@ -55,16 +65,26 @@ public class WebViewLocationAPI
     public void onLocationFix(Location location)
     {
         final Location locationFix = location ;
-        this.currentLocation = location ; // TODO Should this be updated here or not?
+        this.currentLocation = location ;
+        this.locationFixObtained = true ;
+
+
 
         if(this.webView != null ) {
             this.webView.post(new Runnable() {
                 @Override
                 public void run() {
 
-                    String latlon = getLatLngJSON(locationFix);
+                    final String latlon = getLatLngJSON(locationFix);
                     Log.d(LOG_TAG, "callback to onLocationFix() with latlon" + latlon) ;
-                    webView.loadUrl("javascript:onLocationFix('" + latlon + "');");
+                    if(isCallbackScriptLoaded) {
+                        webView.loadUrl("javascript:onLocationFix('" + latlon + "');");
+                    }
+                    else
+                    {
+                        Log.d(LOG_TAG, "could not execute callback - javascript still loading will request another location fix" ) ;
+                        requestLocationFix();
+                    }
 
                 }
             });
@@ -92,10 +112,11 @@ public class WebViewLocationAPI
         }
     }
 
-    @JavascriptInterface
+    //TODO  Javascript interface version of this method with JSON String argument
     public void setCurrentLocation(Location location)
     {
         this.currentLocation = location ;
+        this.locationFixObtained = true ;
     }
 
     @JavascriptInterface
@@ -107,6 +128,11 @@ public class WebViewLocationAPI
         return latlon;
     }
 
+    // not part of Javascript interface
+    public Location getInternalLocation()
+    {
+       return this.currentLocation ;
+    }
 
      @JavascriptInterface
     public void requestLocationFix()
@@ -147,4 +173,11 @@ public class WebViewLocationAPI
         return this.updateInterval ;
     }
 
+    public boolean isCallbackScriptLoaded() {
+        return isCallbackScriptLoaded;
+    }
+
+    public void setCallbackScriptLoaded(boolean isCallbackScriptLoaded) {
+        this.isCallbackScriptLoaded = isCallbackScriptLoaded;
+    }
 }

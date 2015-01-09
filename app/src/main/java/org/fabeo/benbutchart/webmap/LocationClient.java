@@ -25,7 +25,7 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
     private static final String LOG_TAG = "LocationClient" ;
     private boolean updatesPending = false ;
     private int updatesPendingInterval = 0 ;
-
+    private boolean locationFixPending = false ;
 
     LocationFixListener fixListener ;
     LocationUpdateListener updateListener ;
@@ -57,11 +57,16 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
         Log.d(LOG_TAG, "onConnected") ;
         LocationRequest locationFixRequest = LocationRequest.create();
         // run update a couple of times in hope we might get more accurate result as first location often approximated
-        locationFixRequest.setInterval(2000) ;
-        locationFixRequest.setNumUpdates(3);
-        locationFixRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        LocationServices.FusedLocationApi.requestLocationUpdates(this.apiClient, locationFixRequest, this.fixListener);
-        this.locationInitialized = true ;
+
+        if(this.locationAPI.isLocationFixObtained() == false )
+        {
+            Log.d(LOG_TAG, "onConnected: no location fix : requesting location fix" ) ;
+
+            locationFixRequest.setInterval(2000);
+            locationFixRequest.setNumUpdates(3);
+            locationFixRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+            LocationServices.FusedLocationApi.requestLocationUpdates(this.apiClient, locationFixRequest, this.fixListener);
+        }
 
         if(this.updatesPending)
         {
@@ -70,11 +75,26 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
             this.updatesPendingInterval = 0 ;
             Log.d(LOG_TAG ," pending location updates requested") ;
         }
+
+        if(this.locationFixPending)
+        {
+           this.requestLocationFix();
+           this.locationFixPending = false ;
+           Log.d(LOG_TAG, " pending location fix requested") ;
+        }
     }
 
 
     public void requestLocationFix()
     {
+
+        if(apiClient.isConnected() == false)
+        {
+            this.locationFixPending = true ;
+            Log.d(LOG_TAG, "postponing location fix until apiClient connected") ;
+            return ;
+        }
+
 
         // request a new location fix
         LocationRequest request = LocationRequest.create();
@@ -87,7 +107,7 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
 
     public void requestLocationUpdates(int interval)
     {
-        // request ongoing location updates
+
            if(apiClient.isConnected() == false)
            {
                this.updatesPending = true ;
@@ -96,6 +116,7 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
                return ;
            }
 
+           // request ongoing location updates
             LocationRequest request = LocationRequest.create();
             request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
             request.setInterval(interval) ;

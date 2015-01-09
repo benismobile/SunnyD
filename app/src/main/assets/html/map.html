@@ -26,7 +26,7 @@ L.mapbox.accessToken = 'pk.eyJ1IjoiYmJ1dGNoYXIiLCJhIjoiUG8tTl94ZyJ9.Dnn7UPaGyAae
 
 var caltonRiftTiles = L.mapbox.tileLayer('bbutchar.jp6bc3k8', { zIndex: 2})
      .addTo(map)
-     .setOpacity(1) ;
+     .setOpacity(0.5) ;
 
 var myIcon = L.icon({
 	iconSize: [32, 32],
@@ -37,15 +37,20 @@ var myIcon = L.icon({
 var marker = L.marker([53.3956, -2.9783], {icon: myIcon}).addTo(map);
 
 
+
+
 function getCurrentLocation() {
 
     // first get immediate response by obtaining last known location
-    latlonObj = JSON.parse(AndroidLocationAPI.getCurrentLocation());
-    var latlng = L.latLng(latlonObj.lat, latlonObj.lon);
-    map.panTo(latlng);
-    marker.setLatLng(latlng) ;
+    if(AndroidLocationAPI.isLocationFixObtained())
+    {
+       var latlonObj = JSON.parse(AndroidLocationAPI.getCurrentLocation());
+       var latlng = L.latLng(latlonObj.lat, latlonObj.lon);
+       map.panTo(latlng);
+       marker.setLatLng(latlng) ;
+    }
    // now request location fix - result will be sent to the onLocationFix() callback
-      AndroidLocationAPI.requestLocationFix() ;
+    AndroidLocationAPI.requestLocationFix() ;
 };
 
 
@@ -55,6 +60,7 @@ function onLocationFix(latlonStr){
     var latlng = L.latLng(latlonObj.lat, latlonObj.lon);
     marker.setLatLng(latlng) ;
     map.panTo(latlng);
+
 };
 
 
@@ -79,7 +85,7 @@ function requestLocationUpdates()
 function stopLocationUpdates()
 {
     AndroidLocationAPI.stopLocationUpdates() ;
-}
+};
 
 
 function requestBackgroundUpdates()
