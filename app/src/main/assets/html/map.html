@@ -37,23 +37,6 @@ var myIcon = L.icon({
 var marker = L.marker([53.3956, -2.9783], {icon: myIcon}).addTo(map);
 
 
-
-
-function getCurrentLocation() {
-
-    // first get immediate response by obtaining last known location
-    if(AndroidLocationAPI.isLocationFixObtained())
-    {
-       var latlonObj = JSON.parse(AndroidLocationAPI.getCurrentLocation());
-       var latlng = L.latLng(latlonObj.lat, latlonObj.lon);
-       map.panTo(latlng);
-       marker.setLatLng(latlng) ;
-    }
-   // now request location fix - result will be sent to the onLocationFix() callback
-    AndroidLocationAPI.requestLocationFix() ;
-};
-
-
 function onLocationFix(latlonStr){
 
     var latlonObj = JSON.parse(latlonStr);
@@ -62,7 +45,6 @@ function onLocationFix(latlonStr){
     map.panTo(latlng);
 
 };
-
 
 function onLocationUpdate(latlonStr){
 
@@ -74,36 +56,9 @@ function onLocationUpdate(latlonStr){
 };
 
 
-function requestLocationUpdates()
-{
-   // request updates at three second interval
-
-    AndroidLocationAPI.requestLocationUpdates(3000) ;
-
-};
-
-function stopLocationUpdates()
-{
-    AndroidLocationAPI.stopLocationUpdates() ;
-};
-
-
-function requestBackgroundUpdates()
-{
-    console.log("requestBackgroundUpdates") ;
-
-};
-
-
 function onTrackUpdate(gpx){
 
     console.log("onTrackUpdate") ;
-
-};
-
-function isUpdatesRequested(){
-
-    return AndroidLocationAPI.isUpdatesRequested() ;
 
 };
 

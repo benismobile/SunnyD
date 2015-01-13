@@ -75,6 +75,11 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
 
     }
 
+    public WebViewMap getWebViewMap()
+    {
+        return this.webViewMap ;
+    }
+
     public int getCurrentUpdateStatus()
     {
         return this.currentUpdateStatus ;

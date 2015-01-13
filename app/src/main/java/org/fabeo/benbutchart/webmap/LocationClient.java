@@ -1,6 +1,8 @@
 package org.fabeo.benbutchart.webmap;
 
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
@@ -8,6 +10,9 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -130,6 +135,71 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
         LocationServices.FusedLocationApi.removeLocationUpdates(apiClient, this.updateListener) ;
     }
 
+    public void requestTrackUpdates(int interval)
+    {
+
+        Log.d(LOG_TAG, "requestTrackUpdates") ;
+        LocationRequest backgroundUpdateRequest = LocationRequest.create();
+        backgroundUpdateRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        backgroundUpdateRequest.setInterval(interval) ;
+
+        Intent locationUpdateIntent = new Intent() ;
+        locationUpdateIntent.setAction(LocationUpdateIntentService.ACTION_LOCATION_UPDATE) ;
+        locationUpdateIntent.setClass(this.locationAPI.getApplicationContext(),
+                org.fabeo.benbutchart.webmap.LocationUpdateIntentService.class) ;
+
+
+        PendingIntent locationIntent = PendingIntent.getService(this.locationAPI.getApplicationContext(), 0,
+                locationUpdateIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+
+        PendingResult<Status> result =
+                LocationServices.FusedLocationApi.requestLocationUpdates(apiClient, backgroundUpdateRequest, locationIntent);
+
+        result.setResultCallback(new ResultCallback<Status>() {
+            @Override
+            public void onResult(Status status) {
+
+
+                if (status.isSuccess()) {
+
+                    Log.d(LOG_TAG, "location tracking requested") ;
+                }
+
+            }
+        });
+    }
+
+
+    public void stopTrackUpdates()
+    {
+
+
+          Intent locationUpdateIntent = new Intent() ;
+          locationUpdateIntent.setAction(LocationUpdateIntentService.ACTION_LOCATION_UPDATE) ;
+          locationUpdateIntent.setClass(this.locationAPI.getApplicationContext(),
+                org.fabeo.benbutchart.webmap.LocationUpdateIntentService.class) ;
+
+
+        PendingIntent locationIntent = PendingIntent.getService(this.locationAPI.getApplicationContext(), 0,
+                    locationUpdateIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+          PendingResult<Status> backgroundResult =
+                    LocationServices.FusedLocationApi.removeLocationUpdates(apiClient, locationIntent);
+            locationIntent.cancel();
+
+           backgroundResult.setResultCallback(new ResultCallback<Status>() {
+                @Override
+                public void onResult(Status status) {
+                    if(status.isSuccess()) {
+                        Log.d(LOG_TAG, " removed tracking updates");
+                    }
+                }
+            }) ;
+
+    }
+
+
 
     @Override
     public void onConnectionSuspended(int i) {
@@ -172,9 +242,12 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
 
         @Override
         public void onLocationChanged(Location location) {
-            // TODO read latest GPX file
-            // TODO locationAPI.onLocationUpdate(gpxString);
-            throw new UnsupportedOperationException() ;
+
+            Log.d(LOG_TAG, "TrackUpdateListener: onLocationChanged: " + location) ;
+
+            // TODO read track file
+            // TODO locationAPI.onTrackUpdate(gpxString);
+
          }
     }
 

@@ -5,12 +5,12 @@
         android:icon="@drawable/ic_action_place"
         android:orderInCategory="100" android:showAsAction="ifRoom" />
 
-    <item android:id="@+id/action_request_location_updates" android:title="@string/action_request_location_updates"
+    <item android:id="@+id/action_toggle_location_updates" android:title="@string/action_start_location_updates"
         android:icon="@drawable/ic_action_location_searching"
         android:orderInCategory="100" android:showAsAction="ifRoom" />
 
-    <item android:id="@+id/action_request_background_location_updates" android:title="@string/action_request_background_location_updates"
-        android:icon="@drawable/ic_action_location_found"
+    <item android:id="@+id/action_toggle_request_tracking" android:title="@string/action_start_tracking"
+        android:icon="@drawable/ic_action_directions"
         android:orderInCategory="100" android:showAsAction="ifRoom" />
 
 

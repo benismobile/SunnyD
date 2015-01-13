@@ -1,6 +1,7 @@
 package org.fabeo.benbutchart.webmap;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.os.Bundle;
@@ -10,13 +11,16 @@ import android.view.MenuItem;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 
 
 public class WebViewMap extends Activity {
 
     WebView webView = null ;
     WebViewLocationAPI locationAPI = null ;
+
     static SharedPreferences location_api_state_prefs ;
+
     static SharedPreferences.Editor location_api_state_editor ;
 
     private static final String LOG_TAG = "WebViewMap Activity" ;
@@ -24,7 +28,12 @@ public class WebViewMap extends Activity {
     private static final String UPDATE_INTERVAL_KEY = "UPDATE_INTERVAL" ;
     private static final String CURRENT_LOCATION_KEY =  "CURRENT_LOCATION";
     private static final String IS_LOCATION_FIX_KEY = "IS_LOCATION_FIX" ;
+    private static final String TRACKING_REQUESTED_STATUS_KEY = "TRACKING_REQUESTED" ;
+    private static final String TRACKING_INTERVAL_KEY = "TRACKING_KEY" ;
 
+
+    private boolean isTrackingRequested = false ;
+    private int trackingInterval = 0 ;
     private boolean isUpdatesRequested = false ;
     private int updateInterval = 0 ;
     private Location currentLocation ;
@@ -37,6 +46,9 @@ public class WebViewMap extends Activity {
 
         Log.d(LOG_TAG, "onCreate()") ;
 
+        location_api_state_prefs = getSharedPreferences("LOCATION_API_PREFS", Context.MODE_PRIVATE);
+        ;location_api_state_editor = location_api_state_prefs.edit() ;
+
         if(savedInstanceState != null)
         {
 
@@ -45,20 +57,26 @@ public class WebViewMap extends Activity {
                     + " Interval:" + savedInstanceState.getInt(UPDATE_INTERVAL_KEY)
                     + " isLocationFixObtained:" + savedInstanceState.getBoolean(IS_LOCATION_FIX_KEY)
                     + " currentLocation:" + savedInstanceState.getParcelable(CURRENT_LOCATION_KEY)
+                    + " tracking:" + savedInstanceState.getBoolean(TRACKING_REQUESTED_STATUS_KEY)
+                    + " tracking interval:" + savedInstanceState.getInt(TRACKING_INTERVAL_KEY)
             ) ;
             this.updateInterval = savedInstanceState.getInt(UPDATE_INTERVAL_KEY) ;
             this.isUpdatesRequested =    savedInstanceState.getBoolean(UPDATES_REQUESTED_STATUS_KEY) ;
             this.currentLocation = savedInstanceState.getParcelable(CURRENT_LOCATION_KEY) ;
             this.isLocationFixObtained = savedInstanceState.getBoolean(IS_LOCATION_FIX_KEY) ;
+            //TODO use preferences instead of instance state for tracking status and tracking can outlive the process
+            //TODO we mught need to keep these instance variables for track listener though?
+        //    this.isTrackingRequested = savedInstanceState.getBoolean(TRACKING_REQUESTED_STATUS_KEY) ;
+        //    this.trackingInterval = savedInstanceState.getInt(TRACKING_INTERVAL_KEY) ;
 
         }
-
+        // tracking outlives activity so cannot rely on
+        this.isTrackingRequested = location_api_state_prefs.getBoolean(TRACKING_REQUESTED_STATUS_KEY, false) ;
 
         this.webView = new WebView(this) ;
         this.locationAPI = new WebViewLocationAPI(this.webView);
 
         setContentView(this.webView);
-
 
         WebSettings webSettings = this.webView.getSettings() ;
         webSettings.setJavaScriptEnabled(true);
@@ -181,6 +199,11 @@ public class WebViewMap extends Activity {
         if(this.isUpdatesRequested) {
             this.locationAPI.stopLocationUpdates();
         }
+
+        // have to save tracking status to preferences as tracking will last beyond activity life cycle
+        location_api_state_editor.putBoolean(TRACKING_REQUESTED_STATUS_KEY,this.isTrackingRequested) ;
+        location_api_state_editor.commit() ;
+
     }
 
 
@@ -191,11 +214,10 @@ public class WebViewMap extends Activity {
         outState.putInt(UPDATE_INTERVAL_KEY, locationAPI.getUpdateInterval());
         outState.putBoolean(UPDATES_REQUESTED_STATUS_KEY, locationAPI.isUpdatesRequested());
 
+        outState.putBoolean(TRACKING_REQUESTED_STATUS_KEY, locationAPI.isTracking());
+        outState.putInt(TRACKING_INTERVAL_KEY, locationAPI.getTrackingInterval());
         outState.putParcelable(CURRENT_LOCATION_KEY, locationAPI.getInternalLocation());
         outState.putBoolean(IS_LOCATION_FIX_KEY, locationAPI.isLocationFixObtained());
-
-
-
 
     }
 
@@ -211,16 +233,24 @@ public class WebViewMap extends Activity {
                         + " Interval:" + savedInstanceState.getInt(UPDATE_INTERVAL_KEY)
                         + " isLocationFixObtained:" + savedInstanceState.getBoolean(IS_LOCATION_FIX_KEY)
                         + " currentLocation:" + savedInstanceState.getParcelable(CURRENT_LOCATION_KEY)
+                        + " tracking:" + savedInstanceState.getBoolean(TRACKING_REQUESTED_STATUS_KEY)
+                        + " tracking interval:" + savedInstanceState.getInt(TRACKING_INTERVAL_KEY)
         ) ;
+
         this.updateInterval = savedInstanceState.getInt(UPDATE_INTERVAL_KEY) ;
         this.isUpdatesRequested =    savedInstanceState.getBoolean(UPDATES_REQUESTED_STATUS_KEY) ;
 
         this.currentLocation = savedInstanceState.getParcelable(CURRENT_LOCATION_KEY) ;
         this.isLocationFixObtained = savedInstanceState.getBoolean(IS_LOCATION_FIX_KEY) ;
 
+        //this.isTrackingRequested = savedInstanceState.getBoolean(TRACKING_REQUESTED_STATUS_KEY) ;
+        //this.trackingInterval = savedInstanceState.getInt(TRACKING_INTERVAL_KEY) ;
+
 
         if(this.isLocationFixObtained == true) {
+
             // use this if you just want to reset known location but not do anthing on web view
+
             // locationAPI.setCurrentLocation(this.currentLocation);
 
             //use below to reset last known location and callback the web view javascript method onLocationFix
@@ -243,7 +273,24 @@ public class WebViewMap extends Activity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
+
+        Log.d(LOG_TAG, "onCreateOptionsMenu: tracking: " + this.isTrackingRequested + " updates:" + this.isUpdatesRequested) ;
+
         getMenuInflater().inflate(R.menu.menu_web_view_map, menu);
+        if(this.isUpdatesRequested)
+        {
+            MenuItem item = menu.findItem(R.id.action_toggle_location_updates) ;
+            item.setIcon(R.drawable.ic_action_location_off) ;
+            item.setTitle(R.string.action_stop_location_updates) ;
+        }
+
+        if(this.isTrackingRequested)
+        {
+            MenuItem item = menu.findItem(R.id.action_toggle_request_tracking) ;
+            item.setIcon(R.drawable.ic_action_directions_off) ;
+            item.setTitle(R.string.action_stop_tracking) ;
+        }
+
         return true;
     }
 
@@ -261,40 +308,50 @@ public class WebViewMap extends Activity {
         else if(id == R.id.action_get_location)
         {
 
-            webView.post(new Runnable(){
-                @Override
-                public void run()
-                {
-                    webView.loadUrl("javascript:getCurrentLocation();");
-                }
-
-            });
-
+            locationAPI.requestLocationFix();
             return true ;
         }
-        else if(id == R.id.action_request_location_updates)
+        else if(id == R.id.action_toggle_location_updates)
         {
-            webView.post(new Runnable(){
-               @Override
-               public void run()
-               {
-                   webView.loadUrl("javascript:requestLocationUpdates();");
-               }
+            if(this.isUpdatesRequested==false) {
 
-            });
+                locationAPI.requestLocationUpdates(1000);
+                item.setIcon(R.drawable.ic_action_location_off) ;
+                item.setTitle(R.string.action_stop_location_updates) ;
+                this.isUpdatesRequested = true ;
+            }
+            else
+            {
+                locationAPI.stopLocationUpdates();
+                item.setIcon(R.drawable.ic_action_location_searching) ;
+                item.setTitle(R.string.action_start_location_updates) ;
+                this.isUpdatesRequested = false ;
+            }
+
+            // this.isUpdatesRequested = locationAPI.isUpdatesRequested() ;
             return true ;
         }
-        else if(id == R.id.action_request_background_location_updates)
+        else if(id == R.id.action_toggle_request_tracking)
         {
-            webView.post(new Runnable(){
-                @Override
-                public void run()
-                {
-                    webView.loadUrl("javascript:requestBackgroundUpdates();");
-                }
 
-            });
-            return true ;
+            if(this.isTrackingRequested == false) {
+                locationAPI.startTrackUpdates(3000);
+                item.setIcon(R.drawable.ic_action_directions_off) ;
+                item.setTitle(R.string.action_stop_tracking) ;
+                this.isTrackingRequested = true ;
+            }
+            else
+            {
+                locationAPI.stopTrackUpdates();
+                item.setIcon(R.drawable.ic_action_directions) ;
+                item.setTitle(R.string.action_start_tracking) ;
+                this.isTrackingRequested = false ;
+                Toast.makeText(this,"Stopping location tracking...", Toast.LENGTH_SHORT).show() ;
+            }
+
+
+            return true;
+
         }
 
 
