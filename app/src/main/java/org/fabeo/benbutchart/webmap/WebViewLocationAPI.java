@@ -55,6 +55,13 @@ public class WebViewLocationAPI
        return this.locationFixObtained ;
    }
 
+    @Override JavascriptInterface
+    public String getRecord(int id)
+    {
+
+        
+    }
+
     public void onLocationUpdate(Location location)
     {
         final Location updateLocation = location ;
@@ -175,10 +182,10 @@ public class WebViewLocationAPI
     }
 
     @JavascriptInterface
-    public void startTrackUpdates(int interval)
+    public void startTrackUpdates(int interval, String trackid)
     {
         Log.d(LOG_TAG, " request track Updates") ;
-        locationClient.requestTrackUpdates(interval);
+        locationClient.requestTrackUpdates(interval, trackid);
         this.trackingRequested = true ;
         this.trackingInterval = interval ;
     }

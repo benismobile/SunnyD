@@ -135,7 +135,7 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
         LocationServices.FusedLocationApi.removeLocationUpdates(apiClient, this.updateListener) ;
     }
 
-    public void requestTrackUpdates(int interval)
+    public void requestTrackUpdates(int interval, String trackid)
     {
 
         Log.d(LOG_TAG, "requestTrackUpdates") ;
@@ -147,7 +147,7 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
         locationUpdateIntent.setAction(LocationUpdateIntentService.ACTION_LOCATION_UPDATE) ;
         locationUpdateIntent.setClass(this.locationAPI.getApplicationContext(),
                 org.fabeo.benbutchart.webmap.LocationUpdateIntentService.class) ;
-
+        locationUpdateIntent.putExtra("trackid" , trackid) ;
 
         PendingIntent locationIntent = PendingIntent.getService(this.locationAPI.getApplicationContext(), 0,
                 locationUpdateIntent, PendingIntent.FLAG_CANCEL_CURRENT);

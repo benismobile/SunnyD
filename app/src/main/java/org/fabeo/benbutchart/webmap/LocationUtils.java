@@ -2,6 +2,10 @@ package org.fabeo.benbutchart.webmap;
 
 import android.content.Context;
 import android.location.Location;
+import android.util.Log;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * Created by benbutchart on 02/12/2014.
@@ -29,6 +33,8 @@ public class LocationUtils {
     // A fast ceiling of update intervals, used when the app is visible
     public static final long FAST_INTERVAL_CEILING_IN_MILLISECONDS =
             MILLISECONDS_PER_SECOND * FAST_CEILING_IN_SECONDS;
+
+    private static final String LOG_TAG = "LocationUtils" ;
 
     /**
      * Get the latitude and longitude from the Location object returned by
@@ -67,12 +73,32 @@ public class LocationUtils {
 
 
             return "{ \"lat\":" + currentLocation.getLatitude() + " , \"lon\":" +    currentLocation.getLongitude() + "}" ;
-
+            //TODO add other location properties - geoJSON?
         } else {
 
             // Otherwise, return the empty string
             return "";
         }
+    }
+
+    public static Location getLocationFromJSON(String JSON, String locationProvider)
+    {
+        try {
+            JSONObject json = new JSONObject(JSON);
+            double latitude = json.getDouble("lat");
+            double longitude = json.getDouble("lat") ;
+            Location location = new Location(locationProvider) ;
+            location.setLongitude(longitude);
+            location.setLatitude(latitude);
+            // TODO add other location object properties
+            return location ;
+        }catch (JSONException e)
+        {
+            Log.e(LOG_TAG, "error converting JSON String into Location object. JSON passed was " + JSON) ;
+            throw new IllegalArgumentException("Error converting JSON String into Android Location object") ;
+        }
+
+
     }
 
 }

@@ -98,6 +98,7 @@ public class WebViewMap extends Activity {
                 {
                     Log.d(LOG_TAG, " LOADED map.html") ;
                     locationAPI.setCallbackScriptLoaded(true);
+                    // TODO check location fix pending - request locationfix - get rid of messy retry code
                 }
                 else
                 {
@@ -335,7 +336,7 @@ public class WebViewMap extends Activity {
         {
 
             if(this.isTrackingRequested == false) {
-                locationAPI.startTrackUpdates(3000);
+                locationAPI.startTrackUpdates(3000, "mytrack");
                 item.setIcon(R.drawable.ic_action_directions_off) ;
                 item.setTitle(R.string.action_stop_tracking) ;
                 this.isTrackingRequested = true ;

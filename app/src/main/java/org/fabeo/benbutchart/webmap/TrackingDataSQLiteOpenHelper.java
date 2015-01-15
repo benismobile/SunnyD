@@ -23,14 +23,14 @@ public class TrackingDataSQLiteOpenHelper extends SQLiteOpenHelper {
     @Override
     public void onCreate(SQLiteDatabase db) {
         Log.d(LOG_TAG, "onCreate") ;
-        db.execSQL("CREATE TABLE Tracks(trackid INTEGER PRIMARY KEY, trackdata TEXT)");
+        db.execSQL("CREATE TABLE Tracks(trackid TEXT PRIMARY KEY, trackdata TEXT)");
         db.execSQL("CREATE TABLE LocationUpdates(updateid INTEGER, trackid INTEGER, location TEXT, " +
                 "FOREIGN KEY(trackid) REFERENCES Tracks(trackid))")  ;
 
         Log.d(LOG_TAG, "Created tables Tracks and LocationUpdates") ;
 
         ContentValues values = new ContentValues(2) ;
-        values.put("trackid",1);
+        values.put("trackid","currenttrack");
         values.put("trackdata","{}");
 
         db.insert("Tracks",null,values) ;
@@ -45,5 +45,13 @@ public class TrackingDataSQLiteOpenHelper extends SQLiteOpenHelper {
 
         Log.w(LOG_TAG, " upgrade from " + oldVersion + " to " + newVersion) ;
 
+        // TODO archive data before dropping tables
+        // Drop older table if existed
+        db.execSQL("DROP TABLE IF EXISTS " + "LocationUpdates");
+        db.execSQL("DROP TABLE IF EXISTS " + "Tracks");
+
+
+        // Create tables again
+        onCreate(db);
     }
 }
