@@ -12,7 +12,7 @@ import android.util.Log;
 public class TrackingDataSQLiteOpenHelper extends SQLiteOpenHelper {
 
 
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 9;
     private static final String DATABASE_NAME = "TRACKING";
     private static final String LOG_TAG = "TrackingDataSQLiteOpenHelper" ;
 
@@ -24,7 +24,7 @@ public class TrackingDataSQLiteOpenHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         Log.d(LOG_TAG, "onCreate") ;
         db.execSQL("CREATE TABLE Tracks(trackid TEXT PRIMARY KEY, trackdata TEXT)");
-        db.execSQL("CREATE TABLE LocationUpdates(updateid INTEGER, trackid INTEGER, location TEXT, " +
+        db.execSQL("CREATE TABLE LocationUpdates(updateid INTEGER PRIMARY KEY, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, trackid INTEGER, location TEXT, " +
                 "FOREIGN KEY(trackid) REFERENCES Tracks(trackid))")  ;
 
         Log.d(LOG_TAG, "Created tables Tracks and LocationUpdates") ;
@@ -45,7 +45,7 @@ public class TrackingDataSQLiteOpenHelper extends SQLiteOpenHelper {
 
         Log.w(LOG_TAG, " upgrade from " + oldVersion + " to " + newVersion) ;
 
-        // TODO archive data before dropping tables
+        // TODO archive data in backup tables before dropping tables
         // Drop older table if existed
         db.execSQL("DROP TABLE IF EXISTS " + "LocationUpdates");
         db.execSQL("DROP TABLE IF EXISTS " + "Tracks");

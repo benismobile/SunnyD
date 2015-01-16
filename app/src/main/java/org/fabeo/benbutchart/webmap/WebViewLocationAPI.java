@@ -55,12 +55,6 @@ public class WebViewLocationAPI
        return this.locationFixObtained ;
    }
 
-    @Override JavascriptInterface
-    public String getRecord(int id)
-    {
-
-        
-    }
 
     public void onLocationUpdate(Location location)
     {

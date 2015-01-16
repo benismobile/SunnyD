@@ -1,10 +1,13 @@
 package org.fabeo.benbutchart.webmap;
 
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.location.Location;
 import android.os.Bundle;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -34,7 +37,7 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
 
     LocationFixListener fixListener ;
     LocationUpdateListener updateListener ;
-    TrackUpdateListener trackUpdateListener ;
+    TrackUpdateReceiver trackUpdateReceiver ;
 
     public LocationClient(Context appContext, WebViewLocationAPI locationAPI) {
 
@@ -54,7 +57,7 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
 
         this.fixListener = new LocationFixListener() ;
         this.updateListener = new LocationUpdateListener() ;
-        this.trackUpdateListener = new TrackUpdateListener() ;
+        this.trackUpdateReceiver = new TrackUpdateReceiver() ;
 
 
         // we've connected to GoogleApiClient so can now use FusedLocationAPI
@@ -168,6 +171,13 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
 
             }
         });
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction("org.fabeo.benbutchart.webmap.LOCATION_UPDATE");
+
+        this.locationAPI.getApplicationContext().registerReceiver(this.trackUpdateReceiver, filter) ;
+        Log.d(LOG_TAG, "registered TrackUpdateReceiver") ;
+
     }
 
 
@@ -196,6 +206,10 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
                     }
                 }
             }) ;
+
+
+        this.locationAPI.getApplicationContext().unregisterReceiver(this.trackUpdateReceiver);
+        Log.d(LOG_TAG, "Unregistered TrackUpdateReceiver") ;
 
     }
 
@@ -237,19 +251,24 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
         }
     }
 
-    public class TrackUpdateListener implements LocationListener
+    public class TrackUpdateReceiver extends BroadcastReceiver
     {
 
+
         @Override
-        public void onLocationChanged(Location location) {
+        public void onReceive(Context context, Intent intent) {
 
-            Log.d(LOG_TAG, "TrackUpdateListener: onLocationChanged: " + location) ;
 
-            // TODO read track file
-            // TODO locationAPI.onTrackUpdate(gpxString);
+            Log.d(LOG_TAG, "onReceive called");
+            final Location updateLocation = (Location) intent.getExtras().get(LocationServices.FusedLocationApi.KEY_LOCATION_CHANGED);
+            Log.d(LOG_TAG, "onReceive: updateLocation:" + updateLocation );
 
-         }
+
+        }
+
     }
+
+
 
 
 
