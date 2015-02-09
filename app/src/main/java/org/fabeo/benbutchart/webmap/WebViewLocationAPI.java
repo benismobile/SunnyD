@@ -5,11 +5,7 @@ import android.location.Location;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.Toast;
 
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
 
 import static org.fabeo.benbutchart.webmap.LocationUtils.getLatLngJSON;
 
@@ -28,7 +24,6 @@ public class WebViewLocationAPI
     private boolean locationFixObtained = false ;
     private int updateInterval = 0 ;
     private int trackingInterval = 0 ;
-    private int callbackCount ;
     private boolean isCallbackScriptLoaded = false ;
 
     public WebViewLocationAPI(WebView webView)
@@ -67,7 +62,7 @@ public class WebViewLocationAPI
                 @Override
                 public void run() {
                     String latlon = getLatLngJSON(updateLocation);
-                    webView.loadUrl("javascript:onLocationUpdate('" + latlon + "');");
+                    webView.loadUrl("javascript                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 :onLocationUpdate('" + latlon + "');");
 
                 }
             });
@@ -75,12 +70,12 @@ public class WebViewLocationAPI
         }
     }
 
+
     public void onLocationFix(Location location)
     {
         final Location locationFix = location ;
         this.currentLocation = location ;
         this.locationFixObtained = true ;
-
 
         if(this.webView != null ) {
             this.webView.post(new Runnable() {
@@ -89,27 +84,10 @@ public class WebViewLocationAPI
 
                     final String latlon = getLatLngJSON(locationFix);
                     Log.d(LOG_TAG, "callback to onLocationFix() with latlon" + latlon) ;
-                    if(isCallbackScriptLoaded) {
                         webView.loadUrl("javascript:onLocationFix('" + latlon + "');");
-                    }
-                    else
-                    {
-                        callbackCount += 1 ;
-                        if(callbackCount < 3) {
-                            Log.d(LOG_TAG, "could not execute callbacks to onLocationFix- javascript still loading will request another location fix" ) ;
-                            requestLocationFix();
-                        }
-                        else
-                        {
-                            callbackCount = 0 ;
-                            Log.d(LOG_TAG, "reached max number of callback requests: issue loading maps to web page? ") ;
-                            // TODO prompt user to check internet connection
-                        }
-                    }
 
                 }
             });
-
         }
     }
 
@@ -122,8 +100,7 @@ public class WebViewLocationAPI
             webView.post(new Runnable() {
                 @Override
                 public void run() {
-                    // String latlon = getLatLngJSON(updateLocation);
-                    // TODO obtain GPX String
+
                     webView.loadUrl("javascript:onTrackUpdate('" + gpxTrackData + "');");
 
                 }
@@ -131,6 +108,49 @@ public class WebViewLocationAPI
 
         }
     }
+
+    public void onShowTrack(String GPXTrackData)
+    {
+        final String gpxTrackData = GPXTrackData ;
+
+        if(webView != null ) {
+            webView.post(new Runnable() {
+                @Override
+                public void run() {
+
+                    webView.loadUrl("javascript:onShowTrack('" + gpxTrackData + "');");
+
+                }
+            });
+
+        }
+    }
+
+
+
+    public void onDeleteTrack(String trackId)
+    {
+        final String trkid = trackId ;
+
+        TrackingDataSQLiteOpenHelper dbHelper = new TrackingDataSQLiteOpenHelper(this.getApplicationContext()) ;
+        dbHelper.deleteTrack(trackId);
+
+        if(webView != null ) {
+            webView.post(new Runnable() {
+                @Override
+                public void run() {
+
+
+                    webView.loadUrl("javascript:onTrackDelete('" + trkid + "');");
+
+                }
+            });
+        }
+
+
+    }
+
+
 
 
     //TODO  Javascript interface version of this method with JSON String argument
@@ -193,6 +213,15 @@ public class WebViewLocationAPI
         this.trackingInterval = 0 ;
     }
 
+    public void registerTrackReceiver()
+    {
+        this.locationClient.registerTrackReceiver();
+    }
+
+    public void unRegisterTrackReceiver()
+    {
+        this.locationClient.unregisterTrackReceiver();
+    }
 
     @JavascriptInterface
     public boolean isUpdatesRequested()

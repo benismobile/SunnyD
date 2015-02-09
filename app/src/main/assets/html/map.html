@@ -28,6 +28,8 @@ var caltonRiftTiles = L.mapbox.tileLayer('bbutchar.jp6bc3k8', { zIndex: 2})
      .addTo(map)
      .setOpacity(0.5) ;
 
+var trackLayer = L.geoJson().addTo(map);
+
 var myIcon = L.icon({
 	iconSize: [32, 32],
 	iconUrl: '../img/map_blue.png'
@@ -56,12 +58,28 @@ function onLocationUpdate(latlonStr){
     map.panTo(latlng);
 };
 
+function onShowTrack(geoJSON)
+{
+    map.removeLayer(trackLayer) ;
+    trackLayer = L.geoJson().addTo(map);
+    var JSONObj = JSON.parse(geoJSON) ;
+    trackLayer.addData(JSONObj);
+    var bounds = trackLayer.getBounds() ;
+    map.fitBounds(bounds) ;
 
-var record = AndroidLocationAPI.getRecord(3) ;
+}
 
-function onTrackUpdate(gpx){
+function onTrackDelete(trackId)
+{
+    console.log("track " + trackId + " deleted") ;
+    map.removeLayer(trackLayer) ;
+}
 
-    console.log("onTrackUpdate") ;
+
+function onTrackUpdate(geoJSON){
+
+    var JSONObj = JSON.parse(geoJSON) ;
+    trackLayer.addData(JSONObj);
 
 };
 

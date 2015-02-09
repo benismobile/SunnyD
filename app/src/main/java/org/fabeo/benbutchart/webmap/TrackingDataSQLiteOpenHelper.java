@@ -2,6 +2,7 @@ package org.fabeo.benbutchart.webmap;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
@@ -12,7 +13,7 @@ import android.util.Log;
 public class TrackingDataSQLiteOpenHelper extends SQLiteOpenHelper {
 
 
-    private static final int DATABASE_VERSION = 9;
+    private static final int DATABASE_VERSION = 17;
     private static final String DATABASE_NAME = "TRACKING";
     private static final String LOG_TAG = "TrackingDataSQLiteOpenHelper" ;
 
@@ -54,4 +55,88 @@ public class TrackingDataSQLiteOpenHelper extends SQLiteOpenHelper {
         // Create tables again
         onCreate(db);
     }
+
+
+    public String[] listTracks()
+    {
+
+        SQLiteDatabase db = getReadableDatabase() ;
+
+        // Check if track already exists
+        String[] query1columns = {"trackid"};
+
+        Cursor cursor = db.query("Tracks", query1columns, null, null, null, null, null);
+        int numRows = 0 ;
+        String[] tracks =  null ;
+
+        if (cursor == null) {
+            db.close();
+            return null;
+        }
+        else
+        {
+            numRows = cursor.getCount();
+            tracks =  new String[numRows] ;
+        }
+
+        int i = 0 ;
+        if(cursor.moveToFirst()) {
+            do {
+
+                String trackdata = cursor.getString(0);
+                tracks[i++] = trackdata;
+            } while (cursor.moveToNext());
+        }
+         cursor.close();
+         db.close();
+         return tracks ;
+
+    }
+
+    public void deleteTrack(String trackid)
+    {
+        Log.d(LOG_TAG, "delete track " + trackid ) ;
+        SQLiteDatabase db = getWritableDatabase() ;
+
+        db.beginTransaction();
+        try {
+            int numrows = db.delete("LocationUpdates", "trackid=?", new String[]{trackid});
+            Log.d(LOG_TAG, "deleted " + numrows + " from LocationUpdates");
+            numrows = db.delete("Tracks", "trackid=?", new String[]{trackid});
+            Log.d(LOG_TAG, "deleted " + numrows + " from Tracks");
+            if(numrows > 0)
+            {
+                db.setTransactionSuccessful();
+            }
+        }finally
+        {
+            db.endTransaction();
+            db.close();
+        }
+
+
+    }
+
+
+    public String getTrackData(String trackid)
+    {
+
+        SQLiteDatabase db = getReadableDatabase() ;
+        String[] querycolumn = {"trackdata"};
+        String selection = "trackid = '" + trackid + "'";
+
+        Cursor cursor = db.query("Tracks", querycolumn, selection, null, null, null, null);
+
+        if (cursor != null) {
+            cursor.moveToFirst();
+        }
+
+        String trackdata = cursor.getString(0);
+        cursor.close();
+        db.close();
+        return trackdata ;
+    }
+
+
+
 }

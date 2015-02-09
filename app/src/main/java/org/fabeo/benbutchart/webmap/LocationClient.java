@@ -49,32 +49,21 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
                 .build();
 
         this.locationAPI = locationAPI ;
+        this.fixListener = new LocationFixListener() ;
+        this.updateListener = new LocationUpdateListener() ;
+        this.trackUpdateReceiver = new TrackUpdateReceiver() ;
+
         this.apiClient.connect();
     }
 
     @Override
     public void onConnected(Bundle bundle) {
 
-        this.fixListener = new LocationFixListener() ;
-        this.updateListener = new LocationUpdateListener() ;
-        this.trackUpdateReceiver = new TrackUpdateReceiver() ;
 
 
         // we've connected to GoogleApiClient so can now use FusedLocationAPI
         // initial location fix request
         Log.d(LOG_TAG, "onConnected") ;
-        LocationRequest locationFixRequest = LocationRequest.create();
-        // run update a couple of times in hope we might get more accurate result as first location often approximated
-
-        if(this.locationAPI.isLocationFixObtained() == false )
-        {
-            Log.d(LOG_TAG, "onConnected: no location fix : requesting location fix" ) ;
-
-            locationFixRequest.setInterval(2000);
-            locationFixRequest.setNumUpdates(3);
-            locationFixRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-            LocationServices.FusedLocationApi.requestLocationUpdates(this.apiClient, locationFixRequest, this.fixListener);
-        }
 
         if(this.updatesPending)
         {
@@ -172,11 +161,8 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
             }
         });
 
-        IntentFilter filter = new IntentFilter();
-        filter.addAction("org.fabeo.benbutchart.webmap.LOCATION_UPDATE");
 
-        this.locationAPI.getApplicationContext().registerReceiver(this.trackUpdateReceiver, filter) ;
-        Log.d(LOG_TAG, "registered TrackUpdateReceiver") ;
+        registerTrackReceiver();
 
     }
 
@@ -207,13 +193,37 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
                 }
             }) ;
 
+        unregisterTrackReceiver();
+    }
 
-        this.locationAPI.getApplicationContext().unregisterReceiver(this.trackUpdateReceiver);
-        Log.d(LOG_TAG, "Unregistered TrackUpdateReceiver") ;
+    public void registerTrackReceiver()
+    {
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(LocationUtils.LOCATION_UPDATE_ACTION);
+
+        if(this.trackUpdateReceiver!= null) {
+            this.locationAPI.getApplicationContext().registerReceiver(this.trackUpdateReceiver, filter);
+            Log.d(LOG_TAG, "registered TrackUpdateReceiver");
+        }
+        else
+        {
+            Log.e(LOG_TAG, " Could not register TrackUpdateReceiver") ;
+        }
 
     }
 
+    public void unregisterTrackReceiver()
+    {
+         if(this.trackUpdateReceiver!=null) {
 
+             this.locationAPI.getApplicationContext().unregisterReceiver(this.trackUpdateReceiver);
+             Log.d(LOG_TAG, "Unregistered TrackUpdateReceiver");
+         }
+        else
+         {
+             Log.e(LOG_TAG, " Could noe unregister TrackUpdateReceiver") ;
+         }
+    }
 
     @Override
     public void onConnectionSuspended(int i) {
@@ -260,10 +270,12 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
 
 
             Log.d(LOG_TAG, "onReceive called");
-            final Location updateLocation = (Location) intent.getExtras().get(LocationServices.FusedLocationApi.KEY_LOCATION_CHANGED);
-            Log.d(LOG_TAG, "onReceive: updateLocation:" + updateLocation );
+            Location updateLocation = (Location) intent.getExtras().get(LocationServices.FusedLocationApi.KEY_LOCATION_CHANGED);
+            String latestTrackData = (String) intent.getExtras().get("org.fabeo.benbutchart.webmap.TRACKDATA");
+            String latestPoint = (String) intent.getExtras().get("org.fabeo.benbutchart.webmap.POINT");
 
-
+            Log.d(LOG_TAG, "onReceive: latestTrackData:" + latestTrackData );
+            locationAPI.onTrackUpdate(latestTrackData);
         }
 
     }

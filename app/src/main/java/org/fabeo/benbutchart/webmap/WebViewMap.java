@@ -1,9 +1,11 @@
 package org.fabeo.benbutchart.webmap;
 
 import android.app.Activity;
+import android.app.DialogFragment;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -11,10 +13,11 @@ import android.view.MenuItem;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.NumberPicker;
 import android.widget.Toast;
 
 
-public class WebViewMap extends Activity {
+public class WebViewMap extends Activity implements TrackDialogListener{
 
     WebView webView = null ;
     WebViewLocationAPI locationAPI = null ;
@@ -51,23 +54,7 @@ public class WebViewMap extends Activity {
 
         if(savedInstanceState != null)
         {
-
-            Log.d(LOG_TAG, "onCreate saved instance state: Updates:"
-                    + savedInstanceState.getBoolean(UPDATES_REQUESTED_STATUS_KEY)
-                    + " Interval:" + savedInstanceState.getInt(UPDATE_INTERVAL_KEY)
-                    + " isLocationFixObtained:" + savedInstanceState.getBoolean(IS_LOCATION_FIX_KEY)
-                    + " currentLocation:" + savedInstanceState.getParcelable(CURRENT_LOCATION_KEY)
-                    + " tracking:" + savedInstanceState.getBoolean(TRACKING_REQUESTED_STATUS_KEY)
-                    + " tracking interval:" + savedInstanceState.getInt(TRACKING_INTERVAL_KEY)
-            ) ;
-            this.updateInterval = savedInstanceState.getInt(UPDATE_INTERVAL_KEY) ;
-            this.isUpdatesRequested =    savedInstanceState.getBoolean(UPDATES_REQUESTED_STATUS_KEY) ;
-            this.currentLocation = savedInstanceState.getParcelable(CURRENT_LOCATION_KEY) ;
-            this.isLocationFixObtained = savedInstanceState.getBoolean(IS_LOCATION_FIX_KEY) ;
-            //TODO use preferences instead of instance state for tracking status and tracking can outlive the process
-            //TODO we mught need to keep these instance variables for track listener though?
-        //    this.isTrackingRequested = savedInstanceState.getBoolean(TRACKING_REQUESTED_STATUS_KEY) ;
-        //    this.trackingInterval = savedInstanceState.getInt(TRACKING_INTERVAL_KEY) ;
+            this.restoreInstanceState(savedInstanceState);
 
         }
         // tracking outlives activity so cannot rely on
@@ -88,6 +75,9 @@ public class WebViewMap extends Activity {
         this.webView.addJavascriptInterface(this.locationAPI, "AndroidLocationAPI");
 
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            this.webView.setWebContentsDebuggingEnabled(true);
+        }
 
         this.webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -98,7 +88,8 @@ public class WebViewMap extends Activity {
                 {
                     Log.d(LOG_TAG, " LOADED map.html") ;
                     locationAPI.setCallbackScriptLoaded(true);
-                    // TODO check location fix pending - request locationfix - get rid of messy retry code
+                    locationAPI.requestLocationFix();
+
                 }
                 else
                 {
@@ -115,6 +106,8 @@ public class WebViewMap extends Activity {
                 webView.loadUrl("file:///android_asset/html/map.html");
             }
         });
+
+
 
 
     }
@@ -135,8 +128,6 @@ public class WebViewMap extends Activity {
             Log.d(LOG_TAG, "onStart: locationAPI instance null") ;
             this.locationAPI = new WebViewLocationAPI(this.webView);
         }
-
-
 
     }
 
@@ -172,7 +163,10 @@ public class WebViewMap extends Activity {
             this.locationAPI.requestLocationUpdates(this.updateInterval);
         }
 
-
+        if(this.isTrackingRequested)
+        {
+            this.locationAPI.registerTrackReceiver();
+        }
 
 
     }
@@ -201,9 +195,16 @@ public class WebViewMap extends Activity {
             this.locationAPI.stopLocationUpdates();
         }
 
+
+        if(this.isTrackingRequested) {
+            this.locationAPI.unRegisterTrackReceiver();
+        }
+
+
         // have to save tracking status to preferences as tracking will last beyond activity life cycle
         location_api_state_editor.putBoolean(TRACKING_REQUESTED_STATUS_KEY,this.isTrackingRequested) ;
         location_api_state_editor.commit() ;
+
 
     }
 
@@ -214,7 +215,6 @@ public class WebViewMap extends Activity {
         Log.d(LOG_TAG, "onSavedInstanceState()") ;
         outState.putInt(UPDATE_INTERVAL_KEY, locationAPI.getUpdateInterval());
         outState.putBoolean(UPDATES_REQUESTED_STATUS_KEY, locationAPI.isUpdatesRequested());
-
         outState.putBoolean(TRACKING_REQUESTED_STATUS_KEY, locationAPI.isTracking());
         outState.putInt(TRACKING_INTERVAL_KEY, locationAPI.getTrackingInterval());
         outState.putParcelable(CURRENT_LOCATION_KEY, locationAPI.getInternalLocation());
@@ -227,34 +227,14 @@ public class WebViewMap extends Activity {
         super.onRestoreInstanceState(savedInstanceState);
 
         Log.d(LOG_TAG, "onRestoreInstanceState()") ;
-
-
-        Log.d(LOG_TAG, "onRestoreInstanceStateinstance state: Updates:"
-                        + savedInstanceState.getBoolean(UPDATES_REQUESTED_STATUS_KEY)
-                        + " Interval:" + savedInstanceState.getInt(UPDATE_INTERVAL_KEY)
-                        + " isLocationFixObtained:" + savedInstanceState.getBoolean(IS_LOCATION_FIX_KEY)
-                        + " currentLocation:" + savedInstanceState.getParcelable(CURRENT_LOCATION_KEY)
-                        + " tracking:" + savedInstanceState.getBoolean(TRACKING_REQUESTED_STATUS_KEY)
-                        + " tracking interval:" + savedInstanceState.getInt(TRACKING_INTERVAL_KEY)
-        ) ;
-
-        this.updateInterval = savedInstanceState.getInt(UPDATE_INTERVAL_KEY) ;
-        this.isUpdatesRequested =    savedInstanceState.getBoolean(UPDATES_REQUESTED_STATUS_KEY) ;
-
-        this.currentLocation = savedInstanceState.getParcelable(CURRENT_LOCATION_KEY) ;
-        this.isLocationFixObtained = savedInstanceState.getBoolean(IS_LOCATION_FIX_KEY) ;
-
-        //this.isTrackingRequested = savedInstanceState.getBoolean(TRACKING_REQUESTED_STATUS_KEY) ;
-        //this.trackingInterval = savedInstanceState.getInt(TRACKING_INTERVAL_KEY) ;
-
+        this.restoreInstanceState(savedInstanceState);
 
         if(this.isLocationFixObtained == true) {
 
-            // use this if you just want to reset known location but not do anthing on web view
-
+            // TODO use this if you just want to reset known location but not do anthing on web view
             // locationAPI.setCurrentLocation(this.currentLocation);
 
-            //use below to reset last known location and callback the web view javascript method onLocationFix
+            //reset last known location and callback the web view javascript method onLocationFix
             locationAPI.onLocationFix(this.currentLocation);
         }
 
@@ -336,7 +316,8 @@ public class WebViewMap extends Activity {
         {
 
             if(this.isTrackingRequested == false) {
-                locationAPI.startTrackUpdates(3000, "mytrack");
+                DialogFragment dialog = new CreateTrackDialog();
+                dialog.show(getFragmentManager(), "Create Track");
                 item.setIcon(R.drawable.ic_action_directions_off) ;
                 item.setTitle(R.string.action_stop_tracking) ;
                 this.isTrackingRequested = true ;
@@ -354,10 +335,40 @@ public class WebViewMap extends Activity {
             return true;
 
         }
+        else if(id == R.id.show_track)
+        {
 
+            DialogFragment dialog = new ShowTracksDialog();
+            dialog.show(getFragmentManager(), null);
+            return true ;
+        }
+        else if(id == R.id.delete_track)
+        {
 
+            DialogFragment dialog = new DeleteTrackDialog() ;
+            dialog.show(getFragmentManager(), null) ;
+            return true ;
+        }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void restoreInstanceState(Bundle savedInstanceState) {
+
+        Log.d(LOG_TAG, "restoreInstanceStateinstance state: Updates:"
+                        + savedInstanceState.getBoolean(UPDATES_REQUESTED_STATUS_KEY)
+                        + " Interval:" + savedInstanceState.getInt(UPDATE_INTERVAL_KEY)
+                        + " isLocationFixObtained:" + savedInstanceState.getBoolean(IS_LOCATION_FIX_KEY)
+                        + " currentLocation:" + savedInstanceState.getParcelable(CURRENT_LOCATION_KEY)
+                        + " tracking:" + savedInstanceState.getBoolean(TRACKING_REQUESTED_STATUS_KEY)
+                        + " tracking interval:" + savedInstanceState.getInt(TRACKING_INTERVAL_KEY)
+        ) ;
+
+        this.updateInterval = savedInstanceState.getInt(UPDATE_INTERVAL_KEY) ;
+        this.isUpdatesRequested =    savedInstanceState.getBoolean(UPDATES_REQUESTED_STATUS_KEY) ;
+        this.currentLocation = savedInstanceState.getParcelable(CURRENT_LOCATION_KEY) ;
+        this.isLocationFixObtained = savedInstanceState.getBoolean(IS_LOCATION_FIX_KEY) ;
+
     }
 
 
@@ -365,5 +376,38 @@ public class WebViewMap extends Activity {
     {
 
         return this.webView ;
+    }
+
+
+    // DialogListenerCallbacks
+    //TODO mmove to locationAPI class ?
+
+    @Override
+    public void onCreateTrackPositiveClick(DialogFragment dialog, String trackid, int trackingInterval) {
+
+        Log.d(LOG_TAG, "onDialogPositiveClick:trackid:" + trackid + " interval:" + trackingInterval) ;
+        locationAPI.startTrackUpdates(trackingInterval*1000, trackid);
+    }
+
+    @Override
+    public void onCreateTrackNegativeClick(DialogFragment dialog) {
+        Log.d(LOG_TAG, "onDialogNegativeClick callback") ;
+    }
+
+    @Override
+    public void onShowTrack(DialogFragment dialog, String trackdata)
+    {
+        Log.d(LOG_TAG, "onShowTrack callback") ;
+        locationAPI.onShowTrack(trackdata); ;
+
+    }
+
+    @Override
+    public void onDeleteTrack(DialogFragment dialog, String trackId)
+    {
+        Log.d(LOG_TAG, "deleteTrack") ;
+        // TODO show confirmation dialog
+        locationAPI.onDeleteTrack(trackId) ;
+
     }
 }

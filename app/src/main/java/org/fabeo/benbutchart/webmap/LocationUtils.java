@@ -34,6 +34,7 @@ public class LocationUtils {
     public static final long FAST_INTERVAL_CEILING_IN_MILLISECONDS =
             MILLISECONDS_PER_SECOND * FAST_CEILING_IN_SECONDS;
 
+    public static final String LOCATION_UPDATE_ACTION = "org.fabeo.benbutchart.webmap.LOCATION_UPDATE" ;
     private static final String LOG_TAG = "LocationUtils" ;
 
     /**

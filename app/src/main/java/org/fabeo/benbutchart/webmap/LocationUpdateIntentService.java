@@ -45,15 +45,8 @@ public class LocationUpdateIntentService extends IntentService {
 
 
     }
-/*
-    public void registerReceiver(BroadcastReceiver receiver)
-    {
-        IntentFilter filter = new IntentFilter();
-        filter.addAction("org.fabeo.benbutchart.webmap.LOCATION_UPDATE");
-        this.broadcastManager.registerReceiver(receiver, filter);
 
-    }
-  */
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -98,7 +91,7 @@ public class LocationUpdateIntentService extends IntentService {
             Log.d(LOG_TAG, "handleLocationUpdate: track '" + trackid + "' not created yet. insert new row");
             ContentValues trackValues = new ContentValues(2);
             trackValues.put("trackid", trackid);
-            String emptyTrack = createEmptyGeoJSONLineString();
+            String emptyTrack = createEmptyGeoJSONLineString(trackid);
             trackValues.put("trackdata", emptyTrack);
             db.insert("Tracks", null, trackValues);
         }
@@ -149,16 +142,17 @@ public class LocationUpdateIntentService extends IntentService {
 
         Intent broadcastLocationIntent = new Intent() ;
 
-        broadcastLocationIntent.setAction("org.fabeo.benbutchart.webmap.LOCATION_UPDATE");
+        broadcastLocationIntent.setAction(LocationUtils.LOCATION_UPDATE_ACTION);
         broadcastLocationIntent.putExtra(LocationServices.FusedLocationApi.KEY_LOCATION_CHANGED, location) ;
-     //   broadcastLocationIntent.setClass(this,LocationClient.TrackUpdateReceiver.class) ;
-        broadcastManager.sendBroadcast(broadcastLocationIntent);
+        broadcastLocationIntent.putExtra("org.fabeo.benbutchart.webmap.TRACKDATA", updatedTrackData) ;
+        broadcastLocationIntent.putExtra("org.fabeo.benbutchart.webmap.POINT",pointJSON);
+        this.sendBroadcast(broadcastLocationIntent);
 
 
     }
 
 
-    private String createEmptyGeoJSONLineString() {
+    private String createEmptyGeoJSONLineString(String id) {
 
         JSONObject geoJSON = new JSONObject();
 
@@ -168,8 +162,14 @@ public class LocationUpdateIntentService extends IntentService {
             geometry.put("type", "LineString");
             geometry.put("coordinates", coordinatesArray);
 
+            JSONObject properties = new JSONObject() ;
+            properties.put("id", id) ;
+
+
             geoJSON.put("type", "Feature");
             geoJSON.put("geometry", geometry);
+            geoJSON.put("properties", properties) ;
+
         } catch (JSONException e) {
             Log.e(LOG_TAG, "createEmptyJSONString failed: " + e);
             throw new IllegalStateException("createEmptyJSONString failed ", e);
