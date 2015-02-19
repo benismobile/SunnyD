@@ -62,13 +62,15 @@ public class WebViewLocationAPI
                 @Override
                 public void run() {
                     String latlon = getLatLngJSON(updateLocation);
-                    webView.loadUrl("javascript                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 :onLocationUpdate('" + latlon + "');");
+                    webView.loadUrl("javascript:onLocationUpdate('" + latlon + "');");
 
                 }
             });
 
         }
     }
+
+
 
 
     public void onLocationFix(Location location)
@@ -139,19 +141,18 @@ public class WebViewLocationAPI
             webView.post(new Runnable() {
                 @Override
                 public void run() {
-
-
                     webView.loadUrl("javascript:onTrackDelete('" + trkid + "');");
-
                 }
             });
         }
-
-
     }
 
 
+    public void createGeofence(String id)
+    {
+        locationClient.addGeofence(30, this.currentLocation, id);
 
+    }
 
     //TODO  Javascript interface version of this method with JSON String argument
     public void setCurrentLocation(Location location)
@@ -255,5 +256,12 @@ public class WebViewLocationAPI
 
     public void setCallbackScriptLoaded(boolean isCallbackScriptLoaded) {
         this.isCallbackScriptLoaded = isCallbackScriptLoaded;
+    }
+
+    public void onGeofenceLivenessUpdate(Location updateLocation) {
+
+        // generally the liveness update is only intended to keep geofences active
+        // but may as well use it to update current location
+        this.currentLocation = updateLocation ;
     }
 }

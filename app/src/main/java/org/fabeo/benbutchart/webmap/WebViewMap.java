@@ -1,12 +1,16 @@
 package org.fabeo.benbutchart.webmap;
 
+import android.app.ActionBar;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.DialogFragment;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -17,7 +21,7 @@ import android.widget.NumberPicker;
 import android.widget.Toast;
 
 
-public class WebViewMap extends Activity implements TrackDialogListener{
+public class WebViewMap extends FragmentActivity implements TrackDialogListener{
 
     WebView webView = null ;
     WebViewLocationAPI locationAPI = null ;
@@ -57,6 +61,7 @@ public class WebViewMap extends Activity implements TrackDialogListener{
             this.restoreInstanceState(savedInstanceState);
 
         }
+
         // tracking outlives activity so cannot rely on
         this.isTrackingRequested = location_api_state_prefs.getBoolean(TRACKING_REQUESTED_STATUS_KEY, false) ;
 
@@ -349,6 +354,14 @@ public class WebViewMap extends Activity implements TrackDialogListener{
             dialog.show(getFragmentManager(), null) ;
             return true ;
         }
+        else if(id == R.id.create_geofence)
+        {
+
+            //DialogFragment dialog = new DeleteTrackDialog() ;
+            //dialog.show(getFragmentManager(), null) ;
+            locationAPI.createGeofence("test geofence") ;
+            return true ;
+        }
 
         return super.onOptionsItemSelected(item);
     }
@@ -406,8 +419,27 @@ public class WebViewMap extends Activity implements TrackDialogListener{
     public void onDeleteTrack(DialogFragment dialog, String trackId)
     {
         Log.d(LOG_TAG, "deleteTrack") ;
-        // TODO show confirmation dialog
-        locationAPI.onDeleteTrack(trackId) ;
+
+        final String trkId = trackId ;
+
+        new AlertDialog.Builder(this)
+            .setTitle("Delete Track")
+            .setMessage("Are you sure you want to delete track " + trkId + " ?")
+            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int which) {
+                    locationAPI.onDeleteTrack(trkId) ;
+                }
+            })
+            .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int which) {
+                    // do nothing
+                }
+            })
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .show();
+
+
+
 
     }
 }

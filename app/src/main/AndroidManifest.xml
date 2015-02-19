@@ -27,6 +27,7 @@
 
         <activity
             android:name="org.fabeo.benbutchart.webmap.WebViewMap"
+            android:uiOptions="splitActionBarWhenNarrow"
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -39,6 +40,17 @@
             android:name="org.fabeo.benbutchart.webmap.LocationUpdateIntentService"
             android:exported="false" >
         </service>
+
+        <activity
+            android:name="org.fabeo.benbutchart.webmap.GeofenceActivity"
+            android:label="@string/title_activity_geofence"
+            android:parentActivityName="org.fabeo.benbutchart.webmap.WebViewMap"
+            android:theme="@android:style/Theme.Holo.Light.Dialog">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="org.fabeo.benbutchart.webmap.WebViewMap" />
+        </activity>
+
     </application>
 
 </manifest>

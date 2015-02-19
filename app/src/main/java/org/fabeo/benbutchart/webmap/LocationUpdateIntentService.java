@@ -1,6 +1,10 @@
 package org.fabeo.benbutchart.webmap;
 
 import android.app.IntentService;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Intent;
@@ -13,6 +17,10 @@ import android.location.Location;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
+import com.google.android.gms.location.Geofence;
+import com.google.android.gms.location.GeofenceStatusCodes;
+import com.google.android.gms.location.GeofencingApi;
+import com.google.android.gms.location.GeofencingEvent;
 import com.google.android.gms.location.LocationServices;
 
 import org.json.JSONArray;
@@ -22,6 +30,8 @@ import org.json.JSONObject;
 import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -36,6 +46,8 @@ public class LocationUpdateIntentService extends IntentService {
     // Intent actions
     public static final String ACTION_LOCATION_UPDATE = "org.fabeo.benbutchart.webmap.action.LOCATION_UPDATE";
     private static final String LOG_TAG = "LocationUpdateIntentService";
+    public static final String ACTION_GEOFENCE_TRANSITION = "org.fabeo.benbutchart.webmap.action.GEOFENCE_TRANSITION";
+    public static final String ACTION_GEOFENCE_LIVENESS_UPDATE =  "org.fabeo.benbutchart.webmap.action.GEOFENCE_LIVENESS_UPDATE";
     private SQLiteOpenHelper sqLiteHelper;
     private LocalBroadcastManager broadcastManager ;
 
@@ -61,12 +73,122 @@ public class LocationUpdateIntentService extends IntentService {
         if (intent != null) {
             final String action = intent.getAction();
 
+            Log.d(LOG_TAG, "onHandleIntent: " + action) ;
+
             if (ACTION_LOCATION_UPDATE.equals(action)) {
                 final Location updateLocation = (Location) intent.getExtras().get(LocationServices.FusedLocationApi.KEY_LOCATION_CHANGED);
                 String trackid = (String) intent.getExtras().get("trackid");
                 handleLocationUpdate(updateLocation, trackid);
             }
+            else if(ACTION_GEOFENCE_LIVENESS_UPDATE.equals(action))
+            {
+                // the geofence liveness update is intended to make geofences more responsive than OS normally facilitates
+                // the update interval should be fairly large (20s plus) to ensure not draining power too much
+                Log.d(LOG_TAG, "Geofence liveness update") ;
+                final Location updateLocation = (Location) intent.getExtras().get(LocationServices.FusedLocationApi.KEY_LOCATION_CHANGED);
+                Intent broadcastLocationIntent = new Intent() ;
+                broadcastLocationIntent.setAction(ACTION_GEOFENCE_LIVENESS_UPDATE);
+
+                broadcastLocationIntent.putExtra(LocationServices.FusedLocationApi.KEY_LOCATION_CHANGED, updateLocation) ;
+                this.sendBroadcast(broadcastLocationIntent);
+
+            }
+
+            else if (ACTION_GEOFENCE_TRANSITION.equals(action))
+            {
+
+                GeofencingEvent event = GeofencingEvent.fromIntent(intent) ;
+
+                if(event.hasError())
+                {
+                    if ( event.getErrorCode() == GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE)
+                    {
+                        Log.e(LOG_TAG,"GEOFENCE NOT AVAILABLE right now") ;
+                        // TODO send a notification to suggest user switches wifi and cell back on
+
+                    }
+                    else if( event.getErrorCode() == GeofenceStatusCodes.GEOFENCE_TOO_MANY_GEOFENCES)
+                    {
+                        Log.e(LOG_TAG, "Too many geofences") ;
+                        // TODO send notification to alert user and suggest clearing geofences
+                    }
+
+                    return ;
+
+                }
+                String transition = null ;
+
+                List<Geofence> geofences = event.getTriggeringGeofences() ;
+
+
+
+                // geofence event may have been triggered by more than one transition event
+                if((Geofence.GEOFENCE_TRANSITION_ENTER & event.getGeofenceTransition()) == Geofence.GEOFENCE_TRANSITION_ENTER)
+                {
+                    transition = "ENTER";
+
+
+                }
+                else if ((Geofence.GEOFENCE_TRANSITION_EXIT & event.getGeofenceTransition()) == Geofence.GEOFENCE_TRANSITION_EXIT)
+                {
+                    transition  = (transition == null) ?  "EXIT" : transition + "|EXIT" ;
+                }
+                else if ((Geofence.GEOFENCE_TRANSITION_DWELL & event.getGeofenceTransition()) == Geofence.GEOFENCE_TRANSITION_DWELL)
+                {
+
+                    transition  = (transition == null) ?  "DWELL" : transition + "|DWELL" ;
+
+                }
+
+                Log.d(LOG_TAG, " transition:" + transition) ;
+
+                for(Iterator<Geofence> i = geofences.iterator() ; i.hasNext() ; )
+                {
+                    Geofence geofence = i.next() ;
+                    Log.d(LOG_TAG, "triggering geofence: " + geofence.toString()) ;
+                    sendBroadcast(geofence,  transition);
+                }
+
+            }
         }
+    }
+
+
+    private void sendBroadcast(Geofence geofence, String transistionEvent)
+    {
+
+
+
+        Intent notificationIntent = new Intent();
+
+        Intent resultIntent = new Intent(this, GeofenceActivity.class);
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
+// Adds the back stack
+        stackBuilder.addParentStack(GeofenceActivity.class);
+
+// Adds the Intent to the top of the stack
+        stackBuilder.addNextIntent(resultIntent);
+// Gets a PendingIntent containing the entire back stack
+        PendingIntent geofenceActivityPendingIntent =
+                stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+
+
+        Notification.Builder nBuilder = new Notification.Builder(this) ;
+        nBuilder.setSmallIcon(R.drawable.map_blue)
+            .setContentTitle("Geofence Alert")
+            .setContentIntent(geofenceActivityPendingIntent)
+            .setVibrate(new long[]{0,500})
+            .setContentText(geofence.getRequestId()  + transistionEvent );
+
+
+        NotificationManager notificationMgr = (NotificationManager) getSystemService(NOTIFICATION_SERVICE) ;
+        notificationMgr.notify(11, nBuilder.build());
+
+        // Gavin McLaughlin - college notional
+        // establishing                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+
+
+
     }
 
     /**
@@ -103,7 +225,7 @@ public class LocationUpdateIntentService extends IntentService {
         values.put("created_at", getDateTime());
         values.put("trackid", trackid);
         values.put("location", pointJSON);
-        //TODO add timestamp to LocationUpdates
+
         db.insert("LocationUpdates", null, values);
 
 
@@ -136,10 +258,10 @@ public class LocationUpdateIntentService extends IntentService {
         updateValues.put("trackid", trackid);
         updateValues.put("trackdata", updatedTrackData);
         db.update("Tracks", updateValues, selection, null);
-
         db.close();
 
 
+        // now broadcast new location and trackdata to broadcast receivers
         Intent broadcastLocationIntent = new Intent() ;
 
         broadcastLocationIntent.setAction(LocationUtils.LOCATION_UPDATE_ACTION);

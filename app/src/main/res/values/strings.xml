@@ -8,4 +8,7 @@
     <string name="action_stop_location_updates">Stop Location Updates</string>
     <string name="action_start_tracking">Start Tracking</string>
     <string name="action_stop_tracking">Stop Tracking</string>
+    <string name="title_activity_geofence">GeofenceActivity</string>
+    <string name="hello_world">Hello world!</string>
+
 </resources>
