@@ -185,7 +185,7 @@ public class LocationUpdateIntentService extends IntentService {
         notificationMgr.notify(11, nBuilder.build());
 
         // Gavin McLaughlin - college notional
-        // establishing                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+        // establishing
 
 
 
