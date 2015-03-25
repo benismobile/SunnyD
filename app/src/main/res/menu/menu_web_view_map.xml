@@ -1,0 +1,45 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".WebViewMap">
+
+    <item android:id="@+id/action_search"
+        android:title="Search"
+        android:icon="@drawable/ic_action_search"
+        android:showAsAction="ifRoom|collapseActionView"
+        android:actionViewClass="android.widget.SearchView" />
+
+    <item android:id="@+id/action_slider"
+        android:title="Search"
+        android:icon="@drawable/ic_action_map"
+        android:showAsAction="ifRoom|collapseActionView"
+        android:actionViewClass="android.widget.SeekBar" />
+
+
+    <item android:id="@+id/action_get_location" android:title="@string/action_get_location"
+        android:icon="@drawable/ic_action_place"
+        android:orderInCategory="100" android:showAsAction="ifRoom" />
+
+    <item android:id="@+id/action_toggle_location_updates" android:title="@string/action_start_location_updates"
+        android:icon="@drawable/ic_action_location_searching"
+        android:orderInCategory="100" android:showAsAction="ifRoom" />
+
+    <item android:id="@+id/action_toggle_request_tracking" android:title="@string/action_start_tracking"
+        android:icon="@drawable/ic_action_directions"
+        android:orderInCategory="100" android:showAsAction="ifRoom" />
+
+
+    <item android:id="@+id/show_track" android:title="Show Tracks"
+        android:orderInCategory="100" android:showAsAction="ifRoom" />
+
+    <item android:id="@+id/delete_track" android:title="Delete Track"
+        android:orderInCategory="100" android:showAsAction="ifRoom" />
+
+    <item android:id="@+id/create_geofence" android:title="CreateGeofence"
+        android:orderInCategory="100" android:showAsAction="ifRoom" />
+
+    <item android:id="@+id/action_settings" android:title="@string/action_settings"
+        android:icon="@drawable/ic_action_settings"
+        android:orderInCategory="100" android:showAsAction="ifRoom" />
+
+
+</menu>

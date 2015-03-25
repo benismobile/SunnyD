@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">WebMap</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_get_location">Get Location Fix</string>
+    <string name="action_start_location_updates">Start Location Updates</string>
+    <string name="action_stop_location_updates">Stop Location Updates</string>
+    <string name="action_start_tracking">Start Tracking</string>
+    <string name="action_stop_tracking">Stop Tracking</string>
+    <string name="title_activity_geofence">GeofenceActivity</string>
+    <string name="hello_world">Hello world!</string>
+
+</resources>

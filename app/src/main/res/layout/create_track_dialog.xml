@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+     android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:weightSum="1" >
+
+
+
+
+        <EditText
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:id="@+id/track_id_text"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:hint="Enter Track identifier"
+            />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="Tracking Interval \n(seconds):"
+            android:id="@+id/track_interval_label"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@id/track_id_text"
+            android:focusable="false"/>
+
+
+
+        <NumberPicker
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/intervalPicker"
+            android:layout_below="@id/track_id_text"
+            android:layout_toRightOf="@id/track_interval_label"
+            android:orientation="vertical"
+            android:hint="Track update interval"
+            android:contentDescription="Track Update Interval"/>
+
+
+    </RelativeLayout>
