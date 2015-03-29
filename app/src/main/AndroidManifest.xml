@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <uses-feature
         android:name="android.hardware.location"
@@ -27,8 +28,8 @@
 
         <activity
             android:name="org.fabeo.benbutchart.webmap.WebViewMap"
-            android:uiOptions="splitActionBarWhenNarrow"
-            android:label="@string/app_name" >
+            android:label="@string/app_name"
+            android:uiOptions="splitActionBarWhenNarrow" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -45,12 +46,23 @@
             android:name="org.fabeo.benbutchart.webmap.GeofenceActivity"
             android:label="@string/title_activity_geofence"
             android:parentActivityName="org.fabeo.benbutchart.webmap.WebViewMap"
-            android:theme="@android:style/Theme.Holo.Light.Dialog">
+            android:theme="@android:style/Theme.Holo.Light.Dialog" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="org.fabeo.benbutchart.webmap.WebViewMap" />
         </activity>
 
+        <service
+            android:name="org.fabeo.benbutchart.webmap.IODetectorService"
+            android:enabled="true"
+            android:exported="true" >
+        </service>
+
+        <receiver
+            android:name="org.fabeo.benbutchart.webmap.WakefulAlarmBroadcastReceiver"
+            android:enabled="true"
+            android:exported="true" >
+        </receiver>
     </application>
 
 </manifest>

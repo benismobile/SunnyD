@@ -333,7 +333,7 @@ public class LocationAPI implements GoogleApiClient.ConnectionCallbacks, GoogleA
 
     }
 
-    // This receiver has to be static so that the receiver can be declared in the Android manifest file
+
     public class BackgroundLocationUpdateReceiver extends BroadcastReceiver {
 
 

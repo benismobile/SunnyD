@@ -1,5 +1,7 @@
 package org.fabeo.benbutchart.webmap;
 
+import android.app.AlarmManager;
+import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -7,7 +9,25 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v4.content.WakefulBroadcastReceiver;
+import android.telephony.CellIdentityCdma;
+import android.telephony.CellIdentityGsm;
+import android.telephony.CellIdentityLte;
+import android.telephony.CellIdentityWcdma;
+import android.telephony.CellInfo;
+import android.telephony.CellInfoCdma;
+import android.telephony.CellInfoGsm;
+import android.telephony.CellInfoLte;
+import android.telephony.CellInfoWcdma;
+import android.telephony.CellSignalStrengthCdma;
+import android.telephony.CellSignalStrengthGsm;
+import android.telephony.CellSignalStrengthLte;
+import android.telephony.CellSignalStrengthWcdma;
+import android.telephony.PhoneStateListener;
+import android.telephony.SignalStrength;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -23,6 +43,8 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 import static org.fabeo.benbutchart.webmap.LocationUtils.getLatLngJSON;
 
@@ -38,11 +60,13 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
     private boolean updatesPending = false ;
     private int updatesPendingInterval = 0 ;
     private boolean locationFixPending = false ;
+    private Context appContext ;
 
     LocationFixListener fixListener ;
     LocationUpdateListener updateListener ;
     TrackUpdateReceiver trackUpdateReceiver ;
     GeofenceLivenessReceiver geofenceLivenessReceiver ;
+
 
     public LocationClient(Context appContext, WebViewLocationAPI locationAPI) {
 
@@ -53,12 +77,15 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
                 .addOnConnectionFailedListener(this)
                 .build();
 
+        this.appContext = appContext ;
         this.locationAPI = locationAPI ;
         this.fixListener = new LocationFixListener() ;
         this.updateListener = new LocationUpdateListener() ;
         this.trackUpdateReceiver = new TrackUpdateReceiver() ;
         this.geofenceLivenessReceiver = new GeofenceLivenessReceiver() ;
         this.apiClient.connect();
+
+
     }
 
     @Override
@@ -87,7 +114,21 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
 
         // TODO allow user to control liveliness of geofences
         // TODO handle system power event and adjust geofence liveness interval
+        // TODO only requestGeofenceLicenessUpdates after checking active geofences exist
         this.requestGeofenceLivenessUpdates(20000);
+
+
+
+        WakefulBroadcastReceiver receiver = new WakefulAlarmBroadcastReceiver() ;
+        appContext.registerReceiver(receiver, new IntentFilter("org.fabeo.benbutchart.webmap.ACTION_UPDATE_CELL_INFO"));
+        Intent i = new Intent(appContext, WakefulAlarmBroadcastReceiver.class);
+        i.setAction("org.fabeo.benbutchart.webmap.ACTION_UPDATE_CELL_INFO") ;
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(appContext, 992, i, PendingIntent.FLAG_CANCEL_CURRENT);
+        AlarmManager manager = (AlarmManager) appContext.getSystemService(Context.ALARM_SERVICE);
+        long timeInterval = 60 * 1000 ;
+        manager.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), timeInterval, pendingIntent);
+        Log.d(LOG_TAG, "Alarm set") ;
+
     }
 
 
@@ -417,6 +458,8 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
 
         }
     }
+
+
 
 
     public class LocationFixListener implements LocationListener
