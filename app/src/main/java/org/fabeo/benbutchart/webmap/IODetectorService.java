@@ -33,7 +33,8 @@ public class IODetectorService extends Service {
 
 
     private TelephonyManager telephonyManager;
-    private Intent intent ;
+    private CellStateListener cellStateListener ;
+    private WakefulAlarmBroadcastReceiver wakefulAlarmBroadcastReceiver ;
 
     public IODetectorService() {
     }
@@ -48,10 +49,25 @@ public class IODetectorService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
 
         Log.d(LOG_TAG, " onStartCommand") ;
-          CellStateListener cellStateListener = new CellStateListener();
+          this.cellStateListener = new CellStateListener();
           this.telephonyManager = (TelephonyManager) this.getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
           this.telephonyManager.listen(cellStateListener, PhoneStateListener.LISTEN_CELL_INFO | PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
-          WakefulAlarmBroadcastReceiver.completeWakefulIntent(intent);
+          if(wakefulAlarmBroadcastReceiver==null) {wakefulAlarmBroadcastReceiver = new WakefulAlarmBroadcastReceiver() ; }
+
+        /*
+          if(intent == null) {
+              Log.d(LOG_TAG, "intent passed to onStartCommand was null due to START_STICKY");
+          }
+          else
+
+          {
+              boolean wakeLockReleased = wakefulAlarmBroadcastReceiver.completeWakefulIntent(intent);
+              Log.d(LOG_TAG, "Wake Lock released:" + wakeLockReleased);
+          }
+         */
+
+        boolean wakeLockReleased = wakefulAlarmBroadcastReceiver.completeWakefulIntent(intent);
+        Log.d(LOG_TAG, "Wake Lock released:" + wakeLockReleased);
 
        //     checkCells();
         //    WakefulAlarmBroadcastReceiver.completeWakefulIntent(intent) ;
@@ -64,21 +80,19 @@ public class IODetectorService extends Service {
 
        // startForeground(223344, noti);
 
-        // We want this service to continue running until it is explicitly
-        // stopped, so return sticky.
-        return START_STICKY;
+        // We can let the OS kill this service and not try to restart it as the wakeful alarm will start it again anyway
+        return START_NOT_STICKY;
     }
 
     @Override
     public void onDestroy() {
-        Log.d(LOG_TAG, "onDestroy") ;
+
         super.onDestroy();
+        Log.d(LOG_TAG, "onDestroy") ;
+        this.telephonyManager.listen(cellStateListener, PhoneStateListener.LISTEN_NONE);
 
     }
 
-    protected void completeWakefulIntent() {
-        WakefulAlarmBroadcastReceiver.completeWakefulIntent(intent);
-    }
 
     @Override
     public void onCreate() {
@@ -86,60 +100,13 @@ public class IODetectorService extends Service {
         super.onCreate();
     }
 
-    private void checkCells()
-    {
-
-        List<CellInfo> cellInfos = telephonyManager.getAllCellInfo();
-
-        for (CellInfo cellInfo : cellInfos) {
-
-            if (cellInfo instanceof CellInfoGsm) {
-                CellInfoGsm cellInfoGsm = (CellInfoGsm) cellInfo;
-                CellIdentityGsm cellIdentity = cellInfoGsm.getCellIdentity();
-                CellSignalStrengthGsm cellSignalStrengthGsm = cellInfoGsm.getCellSignalStrength();
-
-                Log.d(LOG_TAG + "cell", "registered: " + cellInfoGsm.isRegistered());
-                Log.d(LOG_TAG + "cell", cellIdentity.toString());
-                Log.d(LOG_TAG + "cell", cellSignalStrengthGsm.toString());
-            } else if (cellInfo instanceof CellInfoCdma) {
-
-                CellInfoCdma cellInfoCdma = (CellInfoCdma) cellInfo;
-                CellIdentityCdma cellIdentity = cellInfoCdma.getCellIdentity();
-                CellSignalStrengthCdma cellSignalStrengthCdma = cellInfoCdma.getCellSignalStrength();
-                Log.d(LOG_TAG + "cell", "registered: " + cellInfoCdma.isRegistered());
-                Log.d(LOG_TAG + "cell", cellIdentity.toString());
-                Log.d(LOG_TAG + "cell", cellSignalStrengthCdma.toString());
-            } else if (cellInfo instanceof CellInfoWcdma) {
-                CellInfoWcdma cellInfoWcdma = (CellInfoWcdma) cellInfo;
-                CellIdentityWcdma cellIdentity = cellInfoWcdma.getCellIdentity();
-                CellSignalStrengthWcdma cellSignalStrengthWcdma = cellInfoWcdma.getCellSignalStrength();
-
-                Log.d(LOG_TAG + "cell", "registered: " + cellInfoWcdma.isRegistered());
-                Log.d(LOG_TAG + "cell", cellIdentity.toString());
-                Log.d(LOG_TAG + "cell", cellSignalStrengthWcdma.toString());
-
-            } else if (cellInfo instanceof CellInfoLte) {
-                CellInfoLte cellInfoLte = (CellInfoLte) cellInfo;
-                CellIdentityLte cellIdentity = cellInfoLte.getCellIdentity();
-                CellSignalStrengthLte cellSignalStrengthLte = cellInfoLte.getCellSignalStrength();
-
-
-                Log.d(LOG_TAG + "cell", "registered: " + cellInfoLte.isRegistered());
-                Log.d(LOG_TAG + "cell", cellIdentity.toString());
-                Log.d(LOG_TAG + "cell", cellSignalStrengthLte.toString());
-
-
-            }
-        }
-
-    }
 
     public class CellStateListener extends PhoneStateListener {
 
 
         @Override
         public void onCellInfoChanged(List<CellInfo> cellInfo) {
-            super.onCellInfoChanged(cellInfo);
+
 
             if (cellInfo == null || cellInfo.iterator() == null) {
                 Log.d(LOG_TAG, "onCellInfoChanged: no cellinfo data" + cellInfo);
@@ -161,13 +128,6 @@ public class IODetectorService extends Service {
             Log.d(LOG_TAG, " onSignalStrengthsChanged" + signalStrength.toString());
             List<CellInfo> cellInfos = telephonyManager.getAllCellInfo();
 
-            for (Iterator<CellInfo> i = cellInfos.iterator(); i.hasNext(); ) {
-                CellInfo cellInfo1 = i.next();
-
-                String cellInfoStr = cellInfo1.toString();
-
-                Log.d(LOG_TAG, " onSignalStrengthsChanged cellInfo:" + cellInfoStr);
-            }
 
             for (CellInfo cellInfo : cellInfos) {
 

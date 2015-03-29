@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.support.v4.content.WakefulBroadcastReceiver;
 import android.util.Log;
 
-public class WakefulAlarmBroadcastReceiver extends WakefulBroadcastReceiver {
+public  class WakefulAlarmBroadcastReceiver extends WakefulBroadcastReceiver {
 
     public static final String LOG_TAG = "WakefulBroadcastReceiver" ;
 
@@ -18,9 +18,6 @@ public class WakefulAlarmBroadcastReceiver extends WakefulBroadcastReceiver {
 
         Log.d(LOG_TAG, "onReceive") ;
         Intent startIODetectorIntent = new Intent(context, IODetectorService.class);
-        //startIODetectorIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        //context.startService(startIODetectorIntent) ;
-
 
         // start IODetector service keeping device awake
         startWakefulService(context, startIODetectorIntent);

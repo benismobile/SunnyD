@@ -210,7 +210,6 @@ public class WebViewMap extends FragmentActivity implements TrackDialogListener{
         location_api_state_editor.putBoolean(TRACKING_REQUESTED_STATUS_KEY,this.isTrackingRequested) ;
         location_api_state_editor.commit() ;
 
-
     }
 
 

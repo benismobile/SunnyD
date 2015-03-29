@@ -115,7 +115,7 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
         // TODO allow user to control liveliness of geofences
         // TODO handle system power event and adjust geofence liveness interval
         // TODO only requestGeofenceLicenessUpdates after checking active geofences exist
-        this.requestGeofenceLivenessUpdates(20000);
+      //  this.requestGeofenceLivenessUpdates(20000);
 
 
 
