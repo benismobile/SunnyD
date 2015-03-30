@@ -5,6 +5,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.database.SQLException;
 import android.os.IBinder;
 import android.telephony.CellIdentityCdma;
 import android.telephony.CellIdentityGsm;
@@ -35,6 +36,8 @@ public class IODetectorService extends Service {
     private TelephonyManager telephonyManager;
     private CellStateListener cellStateListener ;
     private WakefulAlarmBroadcastReceiver wakefulAlarmBroadcastReceiver ;
+    private IODetectorSQLiteOpenHelper dbHelper ;
+
 
     public IODetectorService() {
     }
@@ -51,12 +54,15 @@ public class IODetectorService extends Service {
         Log.d(LOG_TAG, " onStartCommand") ;
           this.cellStateListener = new CellStateListener();
           this.telephonyManager = (TelephonyManager) this.getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
-          this.telephonyManager.listen(cellStateListener, PhoneStateListener.LISTEN_CELL_INFO | PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
-          if(wakefulAlarmBroadcastReceiver==null) {wakefulAlarmBroadcastReceiver = new WakefulAlarmBroadcastReceiver() ; }
+          // this.telephonyManager.listen(cellStateListener, PhoneStateListener.LISTEN_CELL_INFO | PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
 
-        /*
+        updateCellInfo();
+
+        if(wakefulAlarmBroadcastReceiver==null) {wakefulAlarmBroadcastReceiver = new WakefulAlarmBroadcastReceiver() ; }
+
+
           if(intent == null) {
-              Log.d(LOG_TAG, "intent passed to onStartCommand was null due to START_STICKY");
+              Log.e(LOG_TAG, "intent passed to onStartCommand was null");
           }
           else
 
@@ -64,21 +70,7 @@ public class IODetectorService extends Service {
               boolean wakeLockReleased = wakefulAlarmBroadcastReceiver.completeWakefulIntent(intent);
               Log.d(LOG_TAG, "Wake Lock released:" + wakeLockReleased);
           }
-         */
 
-        boolean wakeLockReleased = wakefulAlarmBroadcastReceiver.completeWakefulIntent(intent);
-        Log.d(LOG_TAG, "Wake Lock released:" + wakeLockReleased);
-
-       //     checkCells();
-        //    WakefulAlarmBroadcastReceiver.completeWakefulIntent(intent) ;
-
-        //Notification noti = new Notification.Builder(this)
-         //       .setContentTitle("Outside Detector")
-         //       .setContentText("Outside Detector is running")
-         //       .setSmallIcon(R.drawable.ic_launcher)
-         //       .build();
-
-       // startForeground(223344, noti);
 
         // We can let the OS kill this service and not try to restart it as the wakeful alarm will start it again anyway
         return START_NOT_STICKY;
@@ -96,9 +88,117 @@ public class IODetectorService extends Service {
 
     @Override
     public void onCreate() {
-        Log.d(LOG_TAG, "onCreate") ;
+
         super.onCreate();
+        Log.d(LOG_TAG, "onCreate") ;
+        dbHelper = new IODetectorSQLiteOpenHelper(this) ;
+        Log.d(LOG_TAG, "dbHelper acquired") ;
     }
+
+
+
+    private void updateCellInfo()
+    {
+
+        List<CellInfo> cellInfos = this.telephonyManager.getAllCellInfo();
+
+        int cellIdHash = 0 ;
+        int signalstrength = 0 ;
+
+        Log.d(LOG_TAG, "update CellInfo: \n") ;
+
+        int maxTimeT = dbHelper.getMaxTimeT() ;
+        maxTimeT = maxTimeT + 1 ;
+
+
+        for (CellInfo cellInfo : cellInfos) {
+
+            if (cellInfo instanceof CellInfoGsm) {
+                CellInfoGsm cellInfoGsm = (CellInfoGsm) cellInfo;
+                CellIdentityGsm cellIdentity = cellInfoGsm.getCellIdentity();
+                CellSignalStrengthGsm cellSignalStrengthGsm = cellInfoGsm.getCellSignalStrength();
+
+             //   Log.d(LOG_TAG + "cell", " registered: " + cellInfoGsm.isRegistered());
+             //   Log.d(LOG_TAG + "cell", cellIdentity.toString());
+             //   Log.d(LOG_TAG + "cell", cellSignalStrengthGsm.toString());
+                cellIdHash = cellIdentity.hashCode() ;
+                signalstrength = cellSignalStrengthGsm.getDbm() ;
+
+            } else if (cellInfo instanceof CellInfoCdma) {
+
+                CellInfoCdma cellInfoCdma = (CellInfoCdma) cellInfo;
+                CellIdentityCdma cellIdentity = cellInfoCdma.getCellIdentity();
+                CellSignalStrengthCdma cellSignalStrengthCdma = cellInfoCdma.getCellSignalStrength();
+          //      Log.d(LOG_TAG + "cell", "registered: " + cellInfoCdma.isRegistered());
+           //     Log.d(LOG_TAG + "cell", cellIdentity.toString());
+           //     Log.d(LOG_TAG + "cell", cellSignalStrengthCdma.toString());
+                cellIdHash = cellIdentity.hashCode() ;
+                signalstrength = cellSignalStrengthCdma.getDbm() ;
+
+            } else if (cellInfo instanceof CellInfoWcdma) {
+                CellInfoWcdma cellInfoWcdma = (CellInfoWcdma) cellInfo;
+                CellIdentityWcdma cellIdentity = cellInfoWcdma.getCellIdentity();
+                CellSignalStrengthWcdma cellSignalStrengthWcdma = cellInfoWcdma.getCellSignalStrength();
+
+               // Log.d(LOG_TAG + "cell", "registered: " + cellInfoWcdma.isRegistered());
+               // Log.d(LOG_TAG + "cell", cellIdentity.toString());
+               // Log.d(LOG_TAG + "cell", cellSignalStrengthWcdma.toString());
+                cellIdHash = cellIdentity.hashCode() ;
+                signalstrength = cellSignalStrengthWcdma.getDbm() ;
+
+            } else if (cellInfo instanceof CellInfoLte) {
+                CellInfoLte cellInfoLte = (CellInfoLte) cellInfo;
+                CellIdentityLte cellIdentity = cellInfoLte.getCellIdentity();
+                CellSignalStrengthLte cellSignalStrengthLte = cellInfoLte.getCellSignalStrength();
+
+
+              //  Log.d(LOG_TAG + "cell", "registered: " + cellInfoLte.isRegistered());
+              //  Log.d(LOG_TAG + "cell", cellIdentity.toString());
+              //  Log.d(LOG_TAG + "cell", cellSignalStrengthLte.toString());
+                cellIdHash = cellIdentity.hashCode() ;
+                signalstrength = cellSignalStrengthLte.getDbm() ;
+
+            }
+
+
+            try {
+                long numRows = dbHelper.insertCellInfo(maxTimeT, cellIdHash, signalstrength);
+
+            }catch(java.sql.SQLException sqle) {
+                    Log.w(LOG_TAG, "Could not insert cell info: " + sqle.getMessage() ) ;
+
+            }
+
+
+
+
+        }
+
+        // decrement timeT
+        try {
+            if(maxTimeT > 2) {
+                dbHelper.decrementTimeT();
+            }
+        }catch(java.sql.SQLException sqle) {
+            Log.w(LOG_TAG, "Could not insert cell info: " + sqle.getMessage() ) ;
+
+        }
+
+        List<String> stashedCellInfos = dbHelper.listCellInfo() ;
+        String stashedvalues = "" ;
+
+        for(String stashedCellInfo : stashedCellInfos)
+        {
+            stashedvalues = stashedvalues.concat(stashedCellInfo+ "\n") ;
+
+        }
+        Log.d(LOG_TAG, "stashed:\n" + stashedvalues) ;
+
+
+
+    }
+
+
 
 
     public class CellStateListener extends PhoneStateListener {
@@ -122,11 +222,16 @@ public class IODetectorService extends Service {
 
         }
 
+
+
         @Override
         public void onSignalStrengthsChanged(SignalStrength signalStrength) {
             super.onSignalStrengthsChanged(signalStrength);
             Log.d(LOG_TAG, " onSignalStrengthsChanged" + signalStrength.toString());
             List<CellInfo> cellInfos = telephonyManager.getAllCellInfo();
+
+
+
 
 
             for (CellInfo cellInfo : cellInfos) {
@@ -136,9 +241,10 @@ public class IODetectorService extends Service {
                     CellIdentityGsm cellIdentity = cellInfoGsm.getCellIdentity();
                     CellSignalStrengthGsm cellSignalStrengthGsm = cellInfoGsm.getCellSignalStrength();
 
-                    Log.d(LOG_TAG + "cell", "registered: " + cellInfoGsm.isRegistered());
+                    Log.d(LOG_TAG + "cell", " registered: " + cellInfoGsm.isRegistered());
                     Log.d(LOG_TAG + "cell", cellIdentity.toString());
                     Log.d(LOG_TAG + "cell", cellSignalStrengthGsm.toString());
+
                 } else if (cellInfo instanceof CellInfoCdma) {
 
                     CellInfoCdma cellInfoCdma = (CellInfoCdma) cellInfo;
@@ -169,6 +275,8 @@ public class IODetectorService extends Service {
 
                 }
 
+                int maxTimeT = dbHelper.getMaxTimeT() ;
+                Log.d(LOG_TAG, "maxTimeT:" + maxTimeT) ;
 
 
             }

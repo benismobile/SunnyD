@@ -13,7 +13,7 @@ import android.util.Log;
 public class TrackingDataSQLiteOpenHelper extends SQLiteOpenHelper {
 
 
-    private static final int DATABASE_VERSION = 17;
+    private static final int DATABASE_VERSION = 21;
     private static final String DATABASE_NAME = "TRACKING";
     private static final String LOG_TAG = "TrackingDataSQLiteOpenHelper" ;
 
@@ -25,7 +25,8 @@ public class TrackingDataSQLiteOpenHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         Log.d(LOG_TAG, "onCreate") ;
         db.execSQL("CREATE TABLE Tracks(trackid TEXT PRIMARY KEY, trackdata TEXT)");
-        db.execSQL("CREATE TABLE LocationUpdates(updateid INTEGER PRIMARY KEY, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, trackid INTEGER, location TEXT, " +
+        db.execSQL("CREATE TABLE LocationUpdates(updateid INTEGER PRIMARY KEY, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+                "trackid INTEGER, location TEXT, " +
                 "FOREIGN KEY(trackid) REFERENCES Tracks(trackid))")  ;
 
         Log.d(LOG_TAG, "Created tables Tracks and LocationUpdates") ;
@@ -39,6 +40,8 @@ public class TrackingDataSQLiteOpenHelper extends SQLiteOpenHelper {
         Log.d(LOG_TAG, "Inserted track") ;
 
 
+
+
     }
 
     @Override
@@ -50,6 +53,7 @@ public class TrackingDataSQLiteOpenHelper extends SQLiteOpenHelper {
         // Drop older table if existed
         db.execSQL("DROP TABLE IF EXISTS " + "LocationUpdates");
         db.execSQL("DROP TABLE IF EXISTS " + "Tracks");
+
 
 
         // Create tables again
