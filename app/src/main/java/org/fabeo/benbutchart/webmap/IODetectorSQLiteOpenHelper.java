@@ -3,6 +3,7 @@ package org.fabeo.benbutchart.webmap;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Parcel;
@@ -19,7 +20,7 @@ import java.util.List;
 public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
 
 
-    private static final int DATABASE_VERSION = 12;
+    private static final int DATABASE_VERSION = 16;
     private static final String DATABASE_NAME = "IODetector";
     private static final String LOG_TAG = "IODetectorSQLiteOpenHelper" ;
 
@@ -87,6 +88,81 @@ public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
 
     }
 
+
+
+    public List<String> collateCellInfo()
+    {
+        SQLiteDatabase db = getReadableDatabase() ;
+        String[] query1columns = {"cellId", "MAX(timeT)", "MIN(timeT)", "COUNT(timeT)", "GROUP_CONCAT(strength, ';') AS strengths" };
+        String selection = "timeT > 0" ;
+        String groupBy = "cellId" ;
+
+        // TODO ORdER By ?
+
+        Cursor cursor = db.query("CellInfo", query1columns, selection, null, groupBy, null, null);
+        int numRows = 0 ;
+
+        ArrayList<String> cellList ;
+
+        if (cursor == null) {
+            db.close();
+            return null;
+        }
+        else
+        {
+            numRows = cursor.getCount();
+            cellList = new ArrayList<String>(numRows) ;
+        }
+
+        int i = 0 ;
+        if(cursor.moveToFirst()) {
+            do {
+
+                String cellId = cursor.getString(0);
+                int max = cursor.getInt(1);
+                int min = cursor.getInt(2);
+                int count = cursor.getInt(3) ;
+                String strengthvals = cursor.getString(4) ;
+                String cellJSON = "{cellId:" + cellId + ", max:" + max + ", min:" + min + ", count:" + count + ", strengths:" + strengthvals  +"}";
+                cellList.add(cellJSON);
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        db.close();
+        return cellList ;
+
+    }
+
+
+
+
+    public int getMinTimeT()
+    {
+        SQLiteDatabase db = getReadableDatabase() ;
+        String[] query1columns = {"MIN(timeT)"};
+        Cursor cursor = db.query("CellInfo", query1columns, null, null, null, null, null);
+
+        int minT = 1 ;
+
+        if (cursor == null) {
+            db.close();
+            return minT;
+        }
+
+        if(cursor.moveToFirst())
+        {
+            minT = cursor.getInt(0);
+
+        }
+
+        cursor.close();
+        db.close();
+        return minT ;
+
+    }
+
+
+
     public int getMaxTimeT()
     {
         SQLiteDatabase db = getReadableDatabase() ;
@@ -121,7 +197,7 @@ public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
         db.close();
     }
 
-    public long insertCellInfo(int timet, int cellid, int strength) throws SQLException
+    public long insertCellInfo(int timet, int cellid, int strength) throws SQLException, SQLiteConstraintException
     {
         SQLiteDatabase db = getWritableDatabase() ;
         ContentValues values = new ContentValues(3);
@@ -135,4 +211,15 @@ public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
         db.close();
         return numrows ;
     }
+
+    public long deleteOldCellInfo()
+    {
+        String selection = "timeT < 1" ;
+        SQLiteDatabase db = getWritableDatabase() ;
+        long numrows = db.delete("CellInfo", selection, null) ;
+        db.close()  ;
+        return numrows ;
+
+    }
+
 }

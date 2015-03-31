@@ -100,7 +100,13 @@ public class IODetectorService extends Service {
     private void updateCellInfo()
     {
 
+
         List<CellInfo> cellInfos = this.telephonyManager.getAllCellInfo();
+        if(cellInfos==null)
+        {
+            Log.w(LOG_TAG, "Could not obtain cellInfos from telephonyManager") ;
+            return ;
+        }
 
         int cellIdHash = 0 ;
         int signalstrength = 0 ;
@@ -167,9 +173,11 @@ public class IODetectorService extends Service {
             }catch(java.sql.SQLException sqle) {
                     Log.w(LOG_TAG, "Could not insert cell info: " + sqle.getMessage() ) ;
 
+            }catch(android.database.sqlite.SQLiteConstraintException sqliteCE)
+            {
+                Log.w(LOG_TAG, "Could not insert cell info: " + sqliteCE.getMessage() ) ;
+
             }
-
-
 
 
         }
@@ -180,12 +188,26 @@ public class IODetectorService extends Service {
                 dbHelper.decrementTimeT();
             }
         }catch(java.sql.SQLException sqle) {
-            Log.w(LOG_TAG, "Could not insert cell info: " + sqle.getMessage() ) ;
+            Log.w(LOG_TAG, "Could not decrement TimeT values: " + sqle.getMessage() ) ;
+
+        }catch(android.database.sqlite.SQLiteConstraintException sqliteCE)
+        {
+            Log.w(LOG_TAG, "Could not decrement timeT values: " + sqliteCE.getMessage() ) ;
 
         }
+        int minTimeT = dbHelper.getMinTimeT() ;
+
+        if(minTimeT < -3)
+        {
+
+            dbHelper.deleteOldCellInfo() ;
+        }
+
 
         List<String> stashedCellInfos = dbHelper.listCellInfo() ;
         String stashedvalues = "" ;
+
+
 
         for(String stashedCellInfo : stashedCellInfos)
         {
@@ -193,6 +215,20 @@ public class IODetectorService extends Service {
 
         }
         Log.d(LOG_TAG, "stashed:\n" + stashedvalues) ;
+
+
+        List<String> collatedCellInfos = dbHelper.collateCellInfo() ;
+
+        String collatedvalues = "" ;
+
+
+
+        for(String collatedCellInfo : collatedCellInfos)
+        {
+            collatedvalues = collatedvalues.concat(collatedCellInfo+ "\n") ;
+
+        }
+        Log.d(LOG_TAG, "\ncollated:\n" + collatedvalues) ;
 
 
 
