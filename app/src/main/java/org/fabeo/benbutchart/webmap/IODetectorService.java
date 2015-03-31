@@ -24,7 +24,13 @@ import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.util.MalformedJsonException;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.nio.charset.MalformedInputException;
 import java.util.Iterator;
 import java.util.List;
 
@@ -182,9 +188,9 @@ public class IODetectorService extends Service {
 
         }
 
-        // decrement timeT
+        // decrement timeT if we already have maximum time points in cellinfo table
         try {
-            if(maxTimeT > 2) {
+            if(maxTimeT > 5) {
                 dbHelper.decrementTimeT();
             }
         }catch(java.sql.SQLException sqle) {
@@ -197,7 +203,8 @@ public class IODetectorService extends Service {
         }
         int minTimeT = dbHelper.getMinTimeT() ;
 
-        if(minTimeT < -3)
+        // periodically get rid of old cellinfos
+        if(minTimeT < -5)
         {
 
             dbHelper.deleteOldCellInfo() ;
@@ -209,9 +216,11 @@ public class IODetectorService extends Service {
 
 
 
+
         for(String stashedCellInfo : stashedCellInfos)
         {
             stashedvalues = stashedvalues.concat(stashedCellInfo+ "\n") ;
+
 
         }
         Log.d(LOG_TAG, "stashed:\n" + stashedvalues) ;
@@ -220,18 +229,46 @@ public class IODetectorService extends Service {
         List<String> collatedCellInfos = dbHelper.collateCellInfo() ;
 
         String collatedvalues = "" ;
-
+        int numCellsSignalStrengthIncreased = 0 ;
+        int numCellsSignalStrengthDecreased = 0 ;
 
 
         for(String collatedCellInfo : collatedCellInfos)
         {
             collatedvalues = collatedvalues.concat(collatedCellInfo+ "\n") ;
+            // TODO get the last  minimum in timeseries
+            // TODO get the last maximum in timeseries
+            // TODO OR just get first and last within timeseries
+            // TODO OR just get min and max withing timeseries
+
+            try {
+                JSONObject jsonObject = new JSONObject(collatedCellInfo);
+                JSONArray strengthValuesArray = jsonObject.getJSONArray("strengths");
+                int numValues = strengthValuesArray.length() ;
+                int firstSignalStrength = strengthValuesArray.getInt(0) ;
+                int lastSignalStrength = strengthValuesArray.getInt(numValues -1) ;
+                int diff = lastSignalStrength - firstSignalStrength ;
+                if(diff > 18)
+                {
+                    numCellsSignalStrengthIncreased += 1;
+                }
+                if(diff < -18)
+                {
+                    numCellsSignalStrengthDecreased += 1 ;
+                }
+
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Could not parse collated cellinfo object: " + e.getMessage() + " JSON input:" + collatedCellInfo) ;
+                throw new IllegalArgumentException("Could not parse collated CellInfo JSON") ;
+            }
 
         }
         Log.d(LOG_TAG, "\ncollated:\n" + collatedvalues) ;
-
-
-
+        Log.d(LOG_TAG, "numCellsSignalStrengthIncreased:" + numCellsSignalStrengthIncreased );
+        Log.d(LOG_TAG, "numCellsSignalStrengthDecreased:" + numCellsSignalStrengthDecreased );
+        double confidenceOutdoorEnv = numCellsSignalStrengthIncreased / collatedCellInfos.size() ;
+        double confidenceIndoorEnv = numCellsSignalStrengthDecreased / collatedCellInfos.size() ;
+        Log.d(LOG_TAG, "confidenceOutdoorEnv: " + confidenceOutdoorEnv + "  confidenceIndoorEnv:" + confidenceIndoorEnv) ;
     }
 
 

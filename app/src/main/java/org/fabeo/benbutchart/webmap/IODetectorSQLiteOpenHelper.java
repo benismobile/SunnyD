@@ -20,7 +20,7 @@ import java.util.List;
 public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
 
 
-    private static final int DATABASE_VERSION = 16;
+    private static final int DATABASE_VERSION = 17;
     private static final String DATABASE_NAME = "IODetector";
     private static final String LOG_TAG = "IODetectorSQLiteOpenHelper" ;
 
@@ -93,7 +93,7 @@ public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
     public List<String> collateCellInfo()
     {
         SQLiteDatabase db = getReadableDatabase() ;
-        String[] query1columns = {"cellId", "MAX(timeT)", "MIN(timeT)", "COUNT(timeT)", "GROUP_CONCAT(strength, ';') AS strengths" };
+        String[] query1columns = {"cellId", "MAX(strength)", "MIN(strength)", "COUNT(timeT)", "GROUP_CONCAT(strength, ',') AS strengths" };
         String selection = "timeT > 0" ;
         String groupBy = "cellId" ;
 
@@ -123,7 +123,7 @@ public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
                 int min = cursor.getInt(2);
                 int count = cursor.getInt(3) ;
                 String strengthvals = cursor.getString(4) ;
-                String cellJSON = "{cellId:" + cellId + ", max:" + max + ", min:" + min + ", count:" + count + ", strengths:" + strengthvals  +"}";
+                String cellJSON = "{\"cellId\":" + cellId + ", \"max\":" + max + ", \"min\":" + min + ", \"count\":" + count + ", \"strengths\":[" + strengthvals  +"]}";
                 cellList.add(cellJSON);
             } while (cursor.moveToNext());
         }
