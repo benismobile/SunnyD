@@ -157,8 +157,6 @@ public class LocationUpdateIntentService extends IntentService {
     private void sendBroadcast(Geofence geofence, String transistionEvent)
     {
 
-
-
         Intent notificationIntent = new Intent();
 
         Intent resultIntent = new Intent(this, GeofenceActivity.class);
@@ -184,8 +182,6 @@ public class LocationUpdateIntentService extends IntentService {
         NotificationManager notificationMgr = (NotificationManager) getSystemService(NOTIFICATION_SERVICE) ;
         notificationMgr.notify(11, nBuilder.build());
 
-        // Gavin McLaughlin - college notional
-        // establishing
 
 
 

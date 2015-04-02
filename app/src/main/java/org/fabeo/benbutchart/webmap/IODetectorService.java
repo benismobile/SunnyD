@@ -1,6 +1,7 @@
 package org.fabeo.benbutchart.webmap;
 
 import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
@@ -31,6 +32,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.nio.charset.MalformedInputException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -122,6 +124,7 @@ public class IODetectorService extends Service {
         int maxTimeT = dbHelper.getMaxTimeT() ;
         maxTimeT = maxTimeT + 1 ;
 
+        ArrayList<Integer> currentCellIds = new ArrayList<Integer>(cellInfos.size()) ;
 
         for (CellInfo cellInfo : cellInfos) {
 
@@ -171,7 +174,7 @@ public class IODetectorService extends Service {
                 signalstrength = cellSignalStrengthLte.getDbm() ;
 
             }
-
+            currentCellIds.add(cellIdHash) ;
 
             try {
                 long numRows = dbHelper.insertCellInfo(maxTimeT, cellIdHash, signalstrength);
@@ -187,10 +190,11 @@ public class IODetectorService extends Service {
 
 
         }
+        // ToDO delete cells no longer in range?
 
         // decrement timeT if we already have maximum time points in cellinfo table
         try {
-            if(maxTimeT > 5) {
+            if(maxTimeT > 15) {
                 dbHelper.decrementTimeT();
             }
         }catch(java.sql.SQLException sqle) {
@@ -204,7 +208,7 @@ public class IODetectorService extends Service {
         int minTimeT = dbHelper.getMinTimeT() ;
 
         // periodically get rid of old cellinfos
-        if(minTimeT < -5)
+        if(minTimeT < -2000)
         {
 
             dbHelper.deleteOldCellInfo() ;
@@ -216,22 +220,22 @@ public class IODetectorService extends Service {
 
 
 
-
+/*
         for(String stashedCellInfo : stashedCellInfos)
         {
             stashedvalues = stashedvalues.concat(stashedCellInfo+ "\n") ;
 
 
         }
-        Log.d(LOG_TAG, "stashed:\n" + stashedvalues) ;
+  */
+        //Log.d(LOG_TAG, "stashed:\n" + stashedvalues) ;
 
 
-        List<String> collatedCellInfos = dbHelper.collateCellInfo() ;
+        List<String> collatedCellInfos = dbHelper.collateCellInfo(currentCellIds) ;
 
         String collatedvalues = "" ;
         int numCellsSignalStrengthIncreased = 0 ;
         int numCellsSignalStrengthDecreased = 0 ;
-
 
         for(String collatedCellInfo : collatedCellInfos)
         {
@@ -246,13 +250,13 @@ public class IODetectorService extends Service {
                 JSONArray strengthValuesArray = jsonObject.getJSONArray("strengths");
                 int numValues = strengthValuesArray.length() ;
                 int firstSignalStrength = strengthValuesArray.getInt(0) ;
-                int lastSignalStrength = strengthValuesArray.getInt(numValues -1) ;
+                int lastSignalStrength = strengthValuesArray.getInt(numValues - 1) ;
                 int diff = lastSignalStrength - firstSignalStrength ;
-                if(diff > 18)
+                if(diff > 15)
                 {
                     numCellsSignalStrengthIncreased += 1;
                 }
-                if(diff < -18)
+                if(diff < -15)
                 {
                     numCellsSignalStrengthDecreased += 1 ;
                 }
@@ -266,9 +270,45 @@ public class IODetectorService extends Service {
         Log.d(LOG_TAG, "\ncollated:\n" + collatedvalues) ;
         Log.d(LOG_TAG, "numCellsSignalStrengthIncreased:" + numCellsSignalStrengthIncreased );
         Log.d(LOG_TAG, "numCellsSignalStrengthDecreased:" + numCellsSignalStrengthDecreased );
-        double confidenceOutdoorEnv = numCellsSignalStrengthIncreased / collatedCellInfos.size() ;
-        double confidenceIndoorEnv = numCellsSignalStrengthDecreased / collatedCellInfos.size() ;
-        Log.d(LOG_TAG, "confidenceOutdoorEnv: " + confidenceOutdoorEnv + "  confidenceIndoorEnv:" + confidenceIndoorEnv) ;
+
+        int numCellsDetected = collatedCellInfos.size() ;
+        Log.d(LOG_TAG, "numCelsDetected:" + numCellsDetected) ;
+
+        double correction = 0 ;
+        //if(numCellsDetected==2) correction = 1 ;
+        if(numCellsDetected==1) correction = 0.5 ;
+        double confidenceOutdoorEnv = ( numCellsDetected == 0 ) ?  0.001 : (double) numCellsSignalStrengthIncreased / ((double)numCellsDetected+correction)  ;
+        double confidenceIndoorEnv = ( numCellsDetected == 0 ) ?  0.001 : (double) numCellsSignalStrengthDecreased / ((double)numCellsDetected+correction)  ;
+        Log.d(LOG_TAG, "confidenceOutdoors: " + confidenceOutdoorEnv  + "  confidenceIndoors:" + confidenceIndoorEnv) ;
+
+        if(confidenceOutdoorEnv > 0.3) {
+
+            Notification.Builder nBuilder = new Notification.Builder(this);
+            nBuilder.setSmallIcon(R.drawable.map_blue)
+                    .setContentTitle("IODetector:")
+                            //             .setContentIntent(geofenceActivityPendingIntent)
+                    .setVibrate(new long[]{0, 500})
+                    .setContentText("Outdoors confidence" + confidenceOutdoorEnv);
+
+
+            NotificationManager notificationMgr = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            notificationMgr.notify(12, nBuilder.build());
+        }
+
+        if(confidenceIndoorEnv > 0.3) {
+
+            Notification.Builder nBuilder = new Notification.Builder(this);
+            nBuilder.setSmallIcon(R.drawable.map_blue)
+                    .setContentTitle("Geofence Alert")
+                            //             .setContentIntent(geofenceActivityPendingIntent)
+                    .setVibrate(new long[]{0, 500})
+                    .setContentText("Indoors confidence" + confidenceIndoorEnv);
+
+
+            NotificationManager notificationMgr = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            notificationMgr.notify(12, nBuilder.build());
+        }
+
     }
 
 

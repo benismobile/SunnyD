@@ -12,6 +12,7 @@ import android.util.Log;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -20,7 +21,8 @@ import java.util.List;
 public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
 
 
-    private static final int DATABASE_VERSION = 17;
+    private static final int DATABASE_VERSION = 33 ;
+            ;
     private static final String DATABASE_NAME = "IODetector";
     private static final String LOG_TAG = "IODetectorSQLiteOpenHelper" ;
 
@@ -90,16 +92,30 @@ public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
 
 
 
-    public List<String> collateCellInfo()
+    public List<String> collateCellInfo(List<Integer> currentCellIds)
     {
+        String currentCellIdsStr = "" ;
+
+        for(Iterator<Integer> i = currentCellIds.iterator() ; i.hasNext();)
+        {
+            Integer currentCellId = i.next() ;
+            currentCellIdsStr = currentCellIdsStr.concat(currentCellId.toString())   ;
+            if(i.hasNext()) {currentCellIdsStr = currentCellIdsStr.concat(",") ;}
+
+        }
+
+
         SQLiteDatabase db = getReadableDatabase() ;
         String[] query1columns = {"cellId", "MAX(strength)", "MIN(strength)", "COUNT(timeT)", "GROUP_CONCAT(strength, ',') AS strengths" };
-        String selection = "timeT > 0" ;
+        String selection = "timeT >= 0 " ;
+               // "and cellId IN (" + currentCellIdsStr +")" ;
         String groupBy = "cellId" ;
+        String having = "COUNT(timeT) > 5";
+
 
         // TODO ORdER By ?
 
-        Cursor cursor = db.query("CellInfo", query1columns, selection, null, groupBy, null, null);
+        Cursor cursor = db.query("CellInfo", query1columns, selection, null, groupBy,null,null );
         int numRows = 0 ;
 
         ArrayList<String> cellList ;

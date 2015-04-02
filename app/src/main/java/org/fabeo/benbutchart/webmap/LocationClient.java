@@ -125,7 +125,7 @@ public class LocationClient implements GoogleApiClient.ConnectionCallbacks, Goog
         i.setAction("org.fabeo.benbutchart.webmap.ACTION_UPDATE_CELL_INFO") ;
         PendingIntent pendingIntent = PendingIntent.getBroadcast(appContext, 992, i, PendingIntent.FLAG_CANCEL_CURRENT);
         AlarmManager manager = (AlarmManager) appContext.getSystemService(Context.ALARM_SERVICE);
-        long timeInterval = 60 * 1000 ;
+        long timeInterval = 1 * 1000 ;
         manager.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), timeInterval, pendingIntent);
         Log.d(LOG_TAG, "Alarm set") ;
 
