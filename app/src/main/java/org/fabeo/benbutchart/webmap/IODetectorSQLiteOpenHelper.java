@@ -21,7 +21,7 @@ import java.util.List;
 public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
 
 
-    private static final int DATABASE_VERSION = 33 ;
+    private static final int DATABASE_VERSION = 42 ;
             ;
     private static final String DATABASE_NAME = "IODetector";
     private static final String LOG_TAG = "IODetectorSQLiteOpenHelper" ;
@@ -129,30 +129,31 @@ public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
     }
 
 
-    public List<String> collateCellInfo(List<Integer> currentCellIds)
+    public List<String> collateCellInfo(List<Integer> currentCellIds, int timeTMin)
     {
         String currentCellIdsStr = "" ;
+        if(currentCellIds!=null) {
+            for (Iterator<Integer> i = currentCellIds.iterator(); i.hasNext(); ) {
+                Integer currentCellId = i.next();
+                currentCellIdsStr = currentCellIdsStr.concat(currentCellId.toString());
+                if (i.hasNext()) {
+                    currentCellIdsStr = currentCellIdsStr.concat(",");
+                }
 
-        for(Iterator<Integer> i = currentCellIds.iterator() ; i.hasNext();)
-        {
-            Integer currentCellId = i.next() ;
-            currentCellIdsStr = currentCellIdsStr.concat(currentCellId.toString())   ;
-            if(i.hasNext()) {currentCellIdsStr = currentCellIdsStr.concat(",") ;}
-
+            }
         }
 
-
         SQLiteDatabase db = getReadableDatabase() ;
-        String[] query1columns = {"cellId", "MAX(strength)", "MIN(strength)", "COUNT(timeT)", "GROUP_CONCAT(strength, ',') AS strengths" };
-        String selection = "timeT >= 0 " ;
+        String[] query1columns = {"cellId", "MAX(strength)", "MIN(strength)", "COUNT(timeT)", "GROUP_CONCAT(strength, ',') AS strengths, MIN(timeT) , MAX(timeT)" };
+        String selection = "timeT >=  " + timeTMin ;
                // "and cellId IN (" + currentCellIdsStr +")" ;
         String groupBy = "cellId" ;
-        String having = "COUNT(timeT) > 5";
+        String having = "COUNT(timeT) > 1 AND MAX(strength) < 0";
 
 
         // TODO ORdER By ?
 
-        Cursor cursor = db.query("CellInfo", query1columns, selection, null, groupBy,null,null );
+        Cursor cursor = db.query("CellInfo", query1columns, selection, null, groupBy,having,null );
         int numRows = 0 ;
 
         ArrayList<String> cellList ;
@@ -176,7 +177,9 @@ public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
                 int min = cursor.getInt(2);
                 int count = cursor.getInt(3) ;
                 String strengthvals = cursor.getString(4) ;
-                String cellJSON = "{\"cellId\":" + cellId + ", \"max\":" + max + ", \"min\":" + min + ", \"count\":" + count + ", \"strengths\":[" + strengthvals  +"]}";
+                int minT = cursor.getInt(5) ;
+                int maxT = cursor.getInt(5) ;
+                String cellJSON = "{\"cellId\":" + cellId + ", \"max\":" + max + ", \"min\":" + min + ", \"count\":" + count + ", \"strengths\":[" + strengthvals  +"],\"minT\":" + minT + "}";
                 cellList.add(cellJSON);
             } while (cursor.moveToNext());
         }
@@ -211,6 +214,35 @@ public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
         cursor.close();
         db.close();
         return minT ;
+
+    }
+
+
+    public int getMaxTimeT(int cellId)
+    {
+        SQLiteDatabase db = getReadableDatabase() ;
+        String[] query1columns = {"MAX(timeT)"};
+        String select = "cellId =" + cellId ;
+        String groupBy = "cellId" ;
+        Cursor cursor = db.query("CellInfo", query1columns, select, null, groupBy, null, null);
+
+        int maxT = -1 ;
+
+        if (cursor == null) {
+            db.close();
+            return maxT;
+        }
+
+        if(cursor.moveToFirst())
+        {
+            maxT = cursor.getInt(0);
+
+        }
+
+        cursor.close();
+        db.close();
+
+        return maxT ;
 
     }
 

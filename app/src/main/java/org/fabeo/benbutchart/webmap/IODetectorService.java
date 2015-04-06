@@ -63,9 +63,9 @@ public class IODetectorService extends Service {
         Log.d(LOG_TAG, " onStartCommand") ;
           this.cellStateListener = new CellStateListener();
           this.telephonyManager = (TelephonyManager) this.getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
-          this.telephonyManager.listen(cellStateListener, PhoneStateListener.LISTEN_CELL_INFO | PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
+         // this.telephonyManager.listen(cellStateListener, PhoneStateListener.LISTEN_CELL_INFO | PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
 
-       // updateCellInfo();
+         updateCellInfo();
 
         if(wakefulAlarmBroadcastReceiver==null) {wakefulAlarmBroadcastReceiver = new WakefulAlarmBroadcastReceiver() ; }
 
@@ -209,7 +209,7 @@ public class IODetectorService extends Service {
         int minTimeT = dbHelper.getMinTimeT() ;
 
         // periodically get rid of old cellinfos
-        if(minTimeT < -2000)
+        if(minTimeT < -200)
         {
 
             dbHelper.deleteOldCellInfo() ;
@@ -222,17 +222,17 @@ public class IODetectorService extends Service {
 
 
 
-        for(String stashedCellInfo : stashedCellInfos)
-        {
-            stashedvalues = stashedvalues.concat(stashedCellInfo+ "\n") ;
+       // for(String stashedCellInfo : stashedCellInfos)
+       // {
+        //    stashedvalues = stashedvalues.concat(stashedCellInfo+ "\n") ;
 
 
-        }
+       // }
 
-        Log.d(LOG_TAG, "stashed:\n" + stashedvalues) ;
+       // Log.d(LOG_TAG, "stashed:\n" + stashedvalues) ;
 
 
-        List<String> collatedCellInfos = dbHelper.collateCellInfo(currentCellIds) ;
+        List<String> collatedCellInfos = dbHelper.collateCellInfo(null, 0) ;
 
         String collatedvalues = "" ;
         int numCellsSignalStrengthIncreased = 0 ;

@@ -128,7 +128,7 @@ public class MainActivity extends FragmentActivity {
         intent.setAction("org.fabeo.benbutchart.webmap.ACTION_UPDATE_CELL_INFO") ;
         PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 992, intent, PendingIntent.FLAG_CANCEL_CURRENT);
         AlarmManager manager = (AlarmManager) this.getSystemService(Context.ALARM_SERVICE);
-        long timeInterval = 60 * 1000 ;
+        long timeInterval = 5 * 1000 ;
         manager.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), timeInterval, pendingIntent);
         Log.d(LOG_TAG, "Alarm set") ;
 
@@ -139,19 +139,7 @@ public class MainActivity extends FragmentActivity {
             @Override
             public void onChanged() {
                 super.onChanged();
-                /*
-                IODetectorSQLiteOpenHelper dbHelper = new IODetectorSQLiteOpenHelper(this) ;
-                List cellInfo = dbHelper.getCellInfo(0) ;
 
-                for(Iterator<String> i = cellInfo.iterator() ; i.hasNext();)
-                {
-                    String cellInfoStr = i.next() ;
-
-                    JSONObject cellInfoJSON = new JSONObject(cellInfoStr) ;
-                    int strength = cellInfoJSON.getInt("stength") ;
-
-                }
-*/
             }
 
         });
@@ -200,9 +188,9 @@ public class MainActivity extends FragmentActivity {
         public void onReceive(Context context, Intent intent) {
 
 
-            Log.d(LOG_TAG, "CellInforUpdateReceiver: onReceive called");
-            String collatedvalues = (String) intent.getExtras().get(IODetectorService.CELL_INFO) ;
-            Log.d(LOG_TAG, "CellInforUpdateReceiver:colllatedvalues:" + collatedvalues ) ;
+          //  Log.d(LOG_TAG, "CellInforUpdateReceiver: onReceive called");
+           // String collatedvalues = (String) intent.getExtras().get(IODetectorService.CELL_INFO) ;
+           // Log.d(LOG_TAG, "CellInforUpdateReceiver:colllatedvalues:" + collatedvalues ) ;
            //TODO update page views to get latest data
             //ViewPager viewPager = (ViewPager) findViewById(R.id.view_pager);
             //viewPager.getAdapter().notifyDataSetChanged();
