@@ -39,7 +39,8 @@ import java.util.List;
 public class IODetectorService extends Service {
 
     public static String LOG_TAG = "IODetectorService";
-
+    public static final  String CELL_INFO_ACTION = "org.fabeo.benbutchart.outdoorsy.CELL_INFO_ACTION" ;
+    public static final  String CELL_INFO = "org.fabeo.benbutchart.outdoorsy.CELL_INFO" ;
 
     private TelephonyManager telephonyManager;
     private CellStateListener cellStateListener ;
@@ -62,9 +63,9 @@ public class IODetectorService extends Service {
         Log.d(LOG_TAG, " onStartCommand") ;
           this.cellStateListener = new CellStateListener();
           this.telephonyManager = (TelephonyManager) this.getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
-          // this.telephonyManager.listen(cellStateListener, PhoneStateListener.LISTEN_CELL_INFO | PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
+          this.telephonyManager.listen(cellStateListener, PhoneStateListener.LISTEN_CELL_INFO | PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
 
-        updateCellInfo();
+       // updateCellInfo();
 
         if(wakefulAlarmBroadcastReceiver==null) {wakefulAlarmBroadcastReceiver = new WakefulAlarmBroadcastReceiver() ; }
 
@@ -220,15 +221,15 @@ public class IODetectorService extends Service {
 
 
 
-/*
+
         for(String stashedCellInfo : stashedCellInfos)
         {
             stashedvalues = stashedvalues.concat(stashedCellInfo+ "\n") ;
 
 
         }
-  */
-        //Log.d(LOG_TAG, "stashed:\n" + stashedvalues) ;
+
+        Log.d(LOG_TAG, "stashed:\n" + stashedvalues) ;
 
 
         List<String> collatedCellInfos = dbHelper.collateCellInfo(currentCellIds) ;
@@ -240,6 +241,16 @@ public class IODetectorService extends Service {
         for(String collatedCellInfo : collatedCellInfos)
         {
             collatedvalues = collatedvalues.concat(collatedCellInfo+ "\n") ;
+
+
+            //send broadcast message with collated cell info data
+            // it should be picked up by MainActivity and displayed if listening
+
+            Intent broadcastCellInfoIntent = new Intent() ;
+            broadcastCellInfoIntent.setAction(CELL_INFO_ACTION);
+            broadcastCellInfoIntent.putExtra(CELL_INFO, collatedvalues) ;
+            this.sendBroadcast(broadcastCellInfoIntent);
+
             // TODO get the last  minimum in timeseries
             // TODO get the last maximum in timeseries
             // TODO OR just get first and last within timeseries
@@ -252,11 +263,11 @@ public class IODetectorService extends Service {
                 int firstSignalStrength = strengthValuesArray.getInt(0) ;
                 int lastSignalStrength = strengthValuesArray.getInt(numValues - 1) ;
                 int diff = lastSignalStrength - firstSignalStrength ;
-                if(diff > 15)
+                if(diff > 25)
                 {
                     numCellsSignalStrengthIncreased += 1;
                 }
-                if(diff < -15)
+                if(diff < -25)
                 {
                     numCellsSignalStrengthDecreased += 1 ;
                 }
@@ -281,7 +292,7 @@ public class IODetectorService extends Service {
         double confidenceIndoorEnv = ( numCellsDetected == 0 ) ?  0.001 : (double) numCellsSignalStrengthDecreased / ((double)numCellsDetected+correction)  ;
         Log.d(LOG_TAG, "confidenceOutdoors: " + confidenceOutdoorEnv  + "  confidenceIndoors:" + confidenceIndoorEnv) ;
 
-        if(confidenceOutdoorEnv > 0.3) {
+        if(confidenceOutdoorEnv > 0.4) {
 
             Notification.Builder nBuilder = new Notification.Builder(this);
             nBuilder.setSmallIcon(R.drawable.map_blue)
@@ -295,7 +306,7 @@ public class IODetectorService extends Service {
             notificationMgr.notify(12, nBuilder.build());
         }
 
-        if(confidenceIndoorEnv > 0.3) {
+        if(confidenceIndoorEnv > 0.4) {
 
             Notification.Builder nBuilder = new Notification.Builder(this);
             nBuilder.setSmallIcon(R.drawable.map_blue)
@@ -341,61 +352,11 @@ public class IODetectorService extends Service {
         public void onSignalStrengthsChanged(SignalStrength signalStrength) {
             super.onSignalStrengthsChanged(signalStrength);
             Log.d(LOG_TAG, " onSignalStrengthsChanged" + signalStrength.toString());
-            List<CellInfo> cellInfos = telephonyManager.getAllCellInfo();
-
-
-
-
-
-            for (CellInfo cellInfo : cellInfos) {
-
-                if (cellInfo instanceof CellInfoGsm) {
-                    CellInfoGsm cellInfoGsm = (CellInfoGsm) cellInfo;
-                    CellIdentityGsm cellIdentity = cellInfoGsm.getCellIdentity();
-                    CellSignalStrengthGsm cellSignalStrengthGsm = cellInfoGsm.getCellSignalStrength();
-
-                    Log.d(LOG_TAG + "cell", " registered: " + cellInfoGsm.isRegistered());
-                    Log.d(LOG_TAG + "cell", cellIdentity.toString());
-                    Log.d(LOG_TAG + "cell", cellSignalStrengthGsm.toString());
-
-                } else if (cellInfo instanceof CellInfoCdma) {
-
-                    CellInfoCdma cellInfoCdma = (CellInfoCdma) cellInfo;
-                    CellIdentityCdma cellIdentity = cellInfoCdma.getCellIdentity();
-                    CellSignalStrengthCdma cellSignalStrengthCdma = cellInfoCdma.getCellSignalStrength();
-                    Log.d(LOG_TAG + "cell", "registered: " + cellInfoCdma.isRegistered());
-                    Log.d(LOG_TAG + "cell", cellIdentity.toString());
-                    Log.d(LOG_TAG + "cell", cellSignalStrengthCdma.toString());
-                } else if (cellInfo instanceof CellInfoWcdma) {
-                    CellInfoWcdma cellInfoWcdma = (CellInfoWcdma) cellInfo;
-                    CellIdentityWcdma cellIdentity = cellInfoWcdma.getCellIdentity();
-                    CellSignalStrengthWcdma cellSignalStrengthWcdma = cellInfoWcdma.getCellSignalStrength();
-
-                    Log.d(LOG_TAG + "cell", "registered: " + cellInfoWcdma.isRegistered());
-                    Log.d(LOG_TAG + "cell", cellIdentity.toString());
-                    Log.d(LOG_TAG + "cell", cellSignalStrengthWcdma.toString());
-
-                } else if (cellInfo instanceof CellInfoLte) {
-                    CellInfoLte cellInfoLte = (CellInfoLte) cellInfo;
-                    CellIdentityLte cellIdentity = cellInfoLte.getCellIdentity();
-                    CellSignalStrengthLte cellSignalStrengthLte = cellInfoLte.getCellSignalStrength();
-
-
-                    Log.d(LOG_TAG + "cell", "registered: " + cellInfoLte.isRegistered());
-                    Log.d(LOG_TAG + "cell", cellIdentity.toString());
-                    Log.d(LOG_TAG + "cell", cellSignalStrengthLte.toString());
-
-
-                }
-
-                int maxTimeT = dbHelper.getMaxTimeT() ;
-                Log.d(LOG_TAG, "maxTimeT:" + maxTimeT) ;
-
-
+            updateCellInfo();
             }
 
 
-        }
+
 
     }
 }

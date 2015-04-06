@@ -80,7 +80,7 @@ public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
                 String timeT = cursor.getString(0);
                 String cellId = cursor.getString(1);
                 String strength = cursor.getString(2);
-                String cellJSON = "{timeT:" + timeT + ", cellId:" + cellId + ", strength:" + strength + "}";
+                String cellJSON = "{\"timeT\":" + timeT + ", \"cellId\":" + cellId + ", \"strength\":" + strength + "}";
                 cellList.add(cellJSON);
             } while (cursor.moveToNext());
         }
@@ -90,6 +90,43 @@ public class IODetectorSQLiteOpenHelper extends SQLiteOpenHelper {
 
     }
 
+
+    public List<String> getCellInfo(int afterTimeT)
+    {
+        SQLiteDatabase db = getReadableDatabase() ;
+        String[] query1columns = {"timeT","cellId", "strength"};
+        String selection = "timeT > " + afterTimeT ;
+        Cursor cursor = db.query("CellInfo", query1columns, selection, null, null, null, null);
+        int numRows = 0 ;
+
+        ArrayList<String> cellList ;
+
+        if (cursor == null) {
+            db.close();
+            return null;
+        }
+        else
+        {
+            numRows = cursor.getCount();
+            cellList = new ArrayList<String>(numRows) ;
+        }
+
+        int i = 0 ;
+        if(cursor.moveToFirst()) {
+            do {
+
+                String timeT = cursor.getString(0);
+                String cellId = cursor.getString(1);
+                String strength = cursor.getString(2);
+                String cellJSON = "{\"timeT\":" + timeT + ", \"cellId\":" + cellId + ", \"strength\":" + strength + "}";
+                cellList.add(cellJSON);
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        db.close();
+        return cellList ;
+
+    }
 
 
     public List<String> collateCellInfo(List<Integer> currentCellIds)
